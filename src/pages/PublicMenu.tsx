@@ -7,6 +7,7 @@ import { mockRestaurant, mockCategories, mockProducts } from '../data/mockMenu';
 import { useTranslation } from 'react-i18next';
 import { translateCategoryName, translateProduct, translateRestaurantDescription } from '../utils/autoTranslate';
 import React from 'react';
+import { apiFetch } from '../lib/api';
 
 export default function PublicMenu({ isDemo = false }: { isDemo?: boolean }) {
   const { slug } = useParams();
@@ -36,30 +37,27 @@ export default function PublicMenu({ isDemo = false }: { isDemo?: boolean }) {
       }
 
       try {
-        const res = await fetch(`/api/menu/${slug}`);
-        const data = await res.json();
-        if (res.ok) {
-          const rest = data.restaurant ? {
-            ...data.restaurant,
-            whatsappNumber: data.restaurant.whatsappNumber || data.restaurant.whatsapp_number
-          } : null;
-          setRestaurant(rest);
-          
-          if (rest) {
-            // Set initial language if not already set or if different from default
-            if (rest.defaultLanguage && !localStorage.getItem('i18nextLng')) {
-              i18n.changeLanguage(rest.defaultLanguage);
-            }
+        const data = await apiFetch(`/api/menu/${slug}`);
+        const rest = data.restaurant ? {
+          ...data.restaurant,
+          whatsappNumber: data.restaurant.whatsappNumber || data.restaurant.whatsapp_number
+        } : null;
+        setRestaurant(rest);
+        
+        if (rest) {
+          // Set initial language if not already set or if different from default
+          if (rest.defaultLanguage && !localStorage.getItem('i18nextLng')) {
+            i18n.changeLanguage(rest.defaultLanguage);
           }
+        }
 
-          if (data.restaurant?.name) {
-            document.title = data.restaurant.name;
-          }
-          setCategories(data.categories || []);
-          setProducts(data.products || []);
-          if (data.restaurant?.template) {
-            setViewTemplate(data.restaurant.template as 'list' | 'grid');
-          }
+        if (data.restaurant?.name) {
+          document.title = data.restaurant.name;
+        }
+        setCategories(data.categories || []);
+        setProducts(data.products || []);
+        if (data.restaurant?.template) {
+          setViewTemplate(data.restaurant.template as 'list' | 'grid');
         }
       } catch (err) {
         console.error(err);

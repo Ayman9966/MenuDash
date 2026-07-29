@@ -5,6 +5,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { LogIn, User as UserIcon, Lock, AlertCircle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { apiFetch } from '../lib/api';
 
 export default function Login() {
   const { t } = useTranslation();
@@ -20,13 +21,11 @@ export default function Login() {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch('/api/auth/login', {
+      const data = await apiFetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password })
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
       
       login(data.user, data.token);
       navigate('/dashboard');
