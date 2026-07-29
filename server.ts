@@ -1,6 +1,5 @@
 import express from "express";
 import path from "path";
-import { createServer as createViteServer } from "vite";
 import { createClient } from '@supabase/supabase-js';
 import Papa from "papaparse";
 import bcrypt from "bcryptjs";
@@ -934,10 +933,11 @@ app.use(express.json({ limit: '10mb' }));
 
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {
-    createViteServer({
-      server: { middlewareMode: true },
-      appType: "spa",
-    }).then(vite => {
+    import("vite").then(async ({ createServer: createViteServer }) => {
+      const vite = await createViteServer({
+        server: { middlewareMode: true },
+        appType: "spa",
+      });
       app.use(vite.middlewares);
       if (!process.env.VERCEL) {
         app.listen(PORT, "0.0.0.0", () => {
