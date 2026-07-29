@@ -27,7 +27,14 @@ if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
 }
 
 // Use service role key if available for backend to bypass RLS
-const supabase = createClient(SUPABASE_URL || '', SUPABASE_SERVICE_ROLE_KEY || SUPABASE_ANON_KEY || '');
+const supabaseKey = SUPABASE_SERVICE_ROLE_KEY || SUPABASE_ANON_KEY || '';
+const isKeyValid = (key: string) => key && key.length > 20 && !key.includes('YOUR_');
+
+if (!SUPABASE_URL || !isKeyValid(supabaseKey)) {
+  console.error('❌ ERROR: Invalid or missing Supabase credentials! Please check your environment variables.');
+}
+
+const supabase = createClient(SUPABASE_URL || '', supabaseKey);
 
 // Format restaurant and determine active plan based on expiration date
 function formatRestaurant(restaurant: any) {

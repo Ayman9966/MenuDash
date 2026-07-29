@@ -19,16 +19,22 @@ export const SUPABASE_URL = getEnv('VITE_SUPABASE_URL') || getEnv('SUPABASE_URL'
 export const SUPABASE_ANON_KEY = getEnv('VITE_SUPABASE_ANON_KEY') || getEnv('SUPABASE_ANON_KEY') || '';
 export const SUPABASE_SERVICE_ROLE_KEY = getEnv('SUPABASE_SERVICE_ROLE_KEY') || getEnv('VITE_SUPABASE_SERVICE_ROLE_KEY') || '';
 
-if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-  if (typeof window !== 'undefined') {
-    console.warn('Supabase credentials missing. Check your environment variables.');
-  }
-}
-
 const isServer = typeof window === 'undefined';
 const supabaseKey = (isServer && SUPABASE_SERVICE_ROLE_KEY) ? SUPABASE_SERVICE_ROLE_KEY : SUPABASE_ANON_KEY;
 
-export const supabase = createClient(SUPABASE_URL, supabaseKey, {
+const isKeyValid = (key: string) => key && key.length > 20 && !key.includes('YOUR_');
+
+// Avoid crashing if credentials are missing
+const validUrl = SUPABASE_URL && SUPABASE_URL.startsWith('http') ? SUPABASE_URL : 'https://placeholder-url.supabase.co';
+const validKey = isKeyValid(supabaseKey) ? supabaseKey : 'placeholder-key';
+
+if (!SUPABASE_URL || !isKeyValid(supabaseKey)) {
+  if (!isServer) {
+    console.warn('Supabase credentials missing or invalid. Check your environment variables.');
+  }
+}
+
+export const supabase = createClient(validUrl, validKey, {
   auth: {
     persistSession: !isServer,
     autoRefreshToken: !isServer,

@@ -1,3 +1,4 @@
-import { app } from '../server.ts';
+// Vercel entry point
+import { app } from '../server.js';
 
 export default app;

@@ -91,7 +91,7 @@ export default function Register() {
               <div className="relative">
                 <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400" size={20} />
                 <input
-                   type="tel"
+                  type="text"
                   required
                   className="w-full pl-12 pr-4 py-3 rounded-xl border border-neutral-200 focus:border-orange-500 focus:ring-4 focus:ring-orange-100 outline-none transition-all"
                   placeholder="+1234567890"
