@@ -2,7 +2,11 @@ import fs from 'fs';
 import path from 'path';
 import { SupabaseClient } from '@supabase/supabase-js';
 
-const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '8593338839:AAFChczTntdK75HJgOX0kpQJOLpuD7ZUqNc';
+const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
+
+if (!TELEGRAM_BOT_TOKEN) {
+  console.warn('Telegram Bot Token is missing. Bot features will not work.');
+}
 const DATA_DIR = path.join(process.cwd(), 'data');
 const ADMINS_FILE = path.join(DATA_DIR, 'telegram_admins.json');
 
