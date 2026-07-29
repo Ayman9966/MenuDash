@@ -922,7 +922,13 @@ app.use(express.json({ limit: '10mb' }));
         summary: {
           totalRows: totalRows || (items.length + duplicatesRemoved),
           duplicatesRemoved,
-          importedCount
+          importedCount,
+          languagesDetected: {
+            en: hasEnglish,
+            fr: hasFrench,
+            ar: hasArabic,
+            list: [hasEnglish && 'English', hasFrench && 'French', hasArabic && 'Arabic'].filter(Boolean)
+          }
         }
       });
     } catch (error: any) {

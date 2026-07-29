@@ -47,7 +47,12 @@ export default function Dashboard() {
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const [importing, setImporting] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
-  const [importSummary, setImportSummary] = useState<{ totalRows: number; duplicatesRemoved: number; importedCount: number } | null>(null);
+  const [importSummary, setImportSummary] = useState<{ 
+    totalRows: number; 
+    duplicatesRemoved: number; 
+    importedCount: number;
+    languagesDetected?: { en: boolean; fr: boolean; ar: boolean; list: string[] };
+  } | null>(null);
 
   const fetchUserAndRestaurant = async () => {
     try {
@@ -568,6 +573,23 @@ export default function Dashboard() {
                           <p className="text-2xl font-black text-orange-600 mt-1">{importSummary.importedCount}</p>
                         </div>
                       </div>
+
+                      {importSummary.languagesDetected && (
+                        <div className="bg-white p-4 rounded-xl border border-orange-100 shadow-xs">
+                          <p className="text-xs font-bold text-neutral-500 uppercase tracking-wider mb-2">Languages Summary Detected</p>
+                          <div className="flex flex-wrap gap-2">
+                            {importSummary.languagesDetected.list.length > 0 ? (
+                              importSummary.languagesDetected.list.map((lang) => (
+                                <span key={lang} className="px-3 py-1 bg-orange-100 text-orange-800 rounded-lg text-xs font-bold">
+                                  {lang}
+                                </span>
+                              ))
+                            ) : (
+                              <span className="text-xs text-neutral-500">English (Default)</span>
+                            )}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
 
