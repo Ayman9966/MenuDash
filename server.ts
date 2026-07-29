@@ -1,6 +1,5 @@
 import express from "express";
 import path from "path";
-import { createServer as createViteServer } from "vite";
 import { createClient } from '@supabase/supabase-js';
 import Papa from "papaparse";
 import bcrypt from "bcryptjs";
@@ -138,14 +137,17 @@ async function ensureUserRestaurant(user: any) {
   }
 }
 
-async function startServer() {
-  const app = express();
-  const PORT = 3000;
+const app = express();
+const PORT = 3000;
 
-  // Start Telegram Bot Long Polling
+export { app };
+
+// Start Telegram Bot Long Polling - Only if not on Vercel
+if (!process.env.VERCEL && !process.env.VERCEL_ENV) {
   startTelegramPolling(supabase);
+}
 
-  app.use(express.json({ limit: '10mb' }));
+app.use(express.json({ limit: '10mb' }));
 
   // Middleware to verify JWT
   const authenticate = async (req: any, res: any, next: any) => {
@@ -942,24 +944,36 @@ async function startServer() {
     }
   });
 
-  // Vite middleware for development
+// Vite middleware for development
+async function setupVite() {
   if (process.env.NODE_ENV !== "production") {
+    const { createServer: createViteServer } = await import("vite");
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",
     });
     app.use(vite.middlewares);
-  } else {
+  } else if (!process.env.VERCEL) {
+    // Only serve static files via Express if NOT on Vercel
+    // Vercel handles static file serving more efficiently via vercel.json rewrites
     const distPath = path.join(process.cwd(), 'dist');
     app.use(express.static(distPath));
-    app.get('*', (req, res) => {
+    app.get('*', (req, res, next) => {
+      // API routes are handled before this
+      if (req.path.startsWith('/api')) {
+        return next();
+      }
       res.sendFile(path.join(distPath, 'index.html'));
     });
   }
+}
 
+setupVite();
+
+if (process.env.NODE_ENV !== "production" || process.env.VITE_DEV) {
   app.listen(PORT, "0.0.0.0", () => {
     console.log(`Server running on http://localhost:${PORT}`);
   });
 }
 
-startServer();
+export default app;
