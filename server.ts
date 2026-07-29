@@ -203,10 +203,11 @@ app.get("/api/health", async (req, res) => {
     status: "ok", 
     database: dbStatus,
     supabaseConfigured: !!SUPABASE_URL && !!SUPABASE_ANON_KEY,
-    hasServiceRole: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+    hasServiceRole: !!process.env.SUPABASE_SERVICE_ROLE_KEY || !!process.env.VITE_SUPABASE_SERVICE_ROLE_KEY,
     telegramAdmins: getAdminChatCount(),
     nodeEnv: process.env.NODE_ENV,
-    vercel: !!process.env.VERCEL
+    vercel: !!process.env.VERCEL,
+    timestamp: new Date().toISOString()
   });
 });
 

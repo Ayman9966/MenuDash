@@ -22,8 +22,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const token = localStorage.getItem('token');
         const savedUser = localStorage.getItem('user');
         
-        if (token && savedUser) {
-          setUser(JSON.parse(savedUser));
+        if (token && savedUser && savedUser !== 'undefined') {
+          try {
+            setUser(JSON.parse(savedUser));
+          } catch (e) {
+            console.error('Failed to parse saved user:', e);
+            localStorage.removeItem('user');
+          }
         }
       } catch (err) {
         console.error('Failed to initialize auth:', err);
