@@ -1,5 +1,6 @@
 import express from "express";
 import path from "path";
+import { createServer as createViteServer } from "vite";
 import { createClient } from '@supabase/supabase-js';
 import Papa from "papaparse";
 import bcrypt from "bcryptjs";
@@ -10,7 +11,7 @@ import {
   sendNewUserAlert,
   updateRestaurantPlan,
   getAdminChatCount
-} from "../server/telegramBot";
+} from "./server/telegramBot";
 
 dotenv.config();
 
@@ -133,14 +134,14 @@ async function ensureUserRestaurant(user: any) {
   }
 }
 
-const app = express();
-const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3000;
+async function startServer() {
+  const app = express();
+  const PORT = 3000;
 
-if (!process.env.VERCEL) {
+  // Start Telegram Bot Long Polling
   startTelegramPolling(supabase);
-}
 
-app.use(express.json({ limit: '10mb' }));
+  app.use(express.json({ limit: '10mb' }));
 
   // Middleware to verify JWT
   const authenticate = async (req: any, res: any, next: any) => {
@@ -916,6 +917,11 @@ app.use(express.json({ limit: '10mb' }));
         await supabase.from('restaurants').update({ languages: Array.from(currentLangs).join(',') }).eq('id', restaurantId);
       }
 
+      const detectedLangs = [];
+      if (hasEnglish) detectedLangs.push('English');
+      if (hasArabic) detectedLangs.push('Arabic');
+      if (hasFrench) detectedLangs.push('French');
+
       res.json({ 
         success: true, 
         message: `Successfully imported ${importedCount} product(s)!`,
@@ -923,12 +929,7 @@ app.use(express.json({ limit: '10mb' }));
           totalRows: totalRows || (items.length + duplicatesRemoved),
           duplicatesRemoved,
           importedCount,
-          languagesDetected: {
-            en: hasEnglish,
-            fr: hasFrench,
-            ar: hasArabic,
-            list: [hasEnglish && 'English', hasFrench && 'French', hasArabic && 'Arabic'].filter(Boolean)
-          }
+          detectedLanguages: detectedLangs.length > 0 ? detectedLangs : ['English']
         }
       });
     } catch (error: any) {
@@ -939,29 +940,22 @@ app.use(express.json({ limit: '10mb' }));
 
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {
-    import("vite").then(async ({ createServer: createViteServer }) => {
-      const vite = await createViteServer({
-        server: { middlewareMode: true },
-        appType: "spa",
-      });
-      app.use(vite.middlewares);
-      if (!process.env.VERCEL) {
-        app.listen(PORT, "0.0.0.0", () => {
-          console.log(`Server running with Vite dev middleware on port ${PORT}`);
-        });
-      }
+    const vite = await createViteServer({
+      server: { middlewareMode: true },
+      appType: "spa",
     });
+    app.use(vite.middlewares);
   } else {
     const distPath = path.join(process.cwd(), 'dist');
     app.use(express.static(distPath));
     app.get('*', (req, res) => {
       res.sendFile(path.join(distPath, 'index.html'));
     });
-    if (!process.env.VERCEL) {
-      app.listen(PORT, "0.0.0.0", () => {
-        console.log(`Server running in production on port ${PORT}`);
-      });
-    }
   }
 
-export default app;
+  app.listen(PORT, "0.0.0.0", () => {
+    console.log(`Server running on http://localhost:${PORT}`);
+  });
+}
+
+startServer();

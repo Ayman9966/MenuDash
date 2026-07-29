@@ -5,7 +5,6 @@ import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { UserPlus, User as UserIcon, Lock, AlertCircle, CheckCircle2, Mail } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { apiFetch } from '../lib/api';
 
 export default function Register() {
   const { t } = useTranslation();
@@ -22,11 +21,13 @@ export default function Register() {
     setLoading(true);
     setError('');
     try {
-      const data = await apiFetch('/api/auth/register', {
+      const res = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password, phone })
       });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
 
       login(data.user, data.token);
       navigate('/dashboard');

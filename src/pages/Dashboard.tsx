@@ -47,12 +47,7 @@ export default function Dashboard() {
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const [importing, setImporting] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
-  const [importSummary, setImportSummary] = useState<{ 
-    totalRows: number; 
-    duplicatesRemoved: number; 
-    importedCount: number;
-    languagesDetected?: { en: boolean; fr: boolean; ar: boolean; list: string[] };
-  } | null>(null);
+  const [importSummary, setImportSummary] = useState<{ totalRows: number; duplicatesRemoved: number; importedCount: number } | null>(null);
 
   const fetchUserAndRestaurant = async () => {
     try {
@@ -574,19 +569,15 @@ export default function Dashboard() {
                         </div>
                       </div>
 
-                      {importSummary.languagesDetected && (
-                        <div className="bg-white p-4 rounded-xl border border-orange-100 shadow-xs">
-                          <p className="text-xs font-bold text-neutral-500 uppercase tracking-wider mb-2">Languages Summary Detected</p>
+                      {importSummary.detectedLanguages && importSummary.detectedLanguages.length > 0 && (
+                        <div className="bg-white p-4 rounded-xl border border-orange-100 shadow-xs space-y-2">
+                          <p className="text-xs font-bold text-neutral-500 uppercase tracking-wider">Languages Summary Detected</p>
                           <div className="flex flex-wrap gap-2">
-                            {importSummary.languagesDetected.list.length > 0 ? (
-                              importSummary.languagesDetected.list.map((lang) => (
-                                <span key={lang} className="px-3 py-1 bg-orange-100 text-orange-800 rounded-lg text-xs font-bold">
-                                  {lang}
-                                </span>
-                              ))
-                            ) : (
-                              <span className="text-xs text-neutral-500">English (Default)</span>
-                            )}
+                            {importSummary.detectedLanguages.map((lang: string, i: number) => (
+                              <span key={i} className="bg-orange-50 border border-orange-200 text-orange-800 text-xs font-bold px-3.5 py-1.5 rounded-lg shadow-2xs">
+                                {lang}
+                              </span>
+                            ))}
                           </div>
                         </div>
                       )}
