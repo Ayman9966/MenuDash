@@ -134,14 +134,14 @@ async function ensureUserRestaurant(user: any) {
   }
 }
 
-async function startServer() {
-  const app = express();
-  const PORT = 3000;
+const app = express();
+const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3000;
 
-  // Start Telegram Bot Long Polling
+if (!process.env.VERCEL) {
   startTelegramPolling(supabase);
+}
 
-  app.use(express.json({ limit: '10mb' }));
+app.use(express.json({ limit: '10mb' }));
 
   // Middleware to verify JWT
   const authenticate = async (req: any, res: any, next: any) => {
@@ -934,22 +934,28 @@ async function startServer() {
 
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {
-    const vite = await createViteServer({
+    createViteServer({
       server: { middlewareMode: true },
       appType: "spa",
+    }).then(vite => {
+      app.use(vite.middlewares);
+      if (!process.env.VERCEL) {
+        app.listen(PORT, "0.0.0.0", () => {
+          console.log(`Server running with Vite dev middleware on port ${PORT}`);
+        });
+      }
     });
-    app.use(vite.middlewares);
   } else {
     const distPath = path.join(process.cwd(), 'dist');
     app.use(express.static(distPath));
     app.get('*', (req, res) => {
       res.sendFile(path.join(distPath, 'index.html'));
     });
+    if (!process.env.VERCEL) {
+      app.listen(PORT, "0.0.0.0", () => {
+        console.log(`Server running in production on port ${PORT}`);
+      });
+    }
   }
 
-  app.listen(PORT, "0.0.0.0", () => {
-    console.log(`Server running on http://localhost:${PORT}`);
-  });
-}
-
-startServer();
+export default app;
