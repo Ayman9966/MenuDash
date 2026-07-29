@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import React from 'react';
+import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Navbar from './components/Navbar';
 import LanguageModal from './components/LanguageModal';
@@ -76,6 +77,7 @@ export default function App() {
   return (
     <Router>
       <AuthProvider>
+        <Toaster position="top-right" />
         <AppContent />
       </AuthProvider>
     </Router>

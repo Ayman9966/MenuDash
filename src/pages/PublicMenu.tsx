@@ -1,798 +1,360 @@
-import { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
-import { Restaurant, Category, Product, CartItem } from '../types';
-import { ShoppingCart, Plus, Minus, Send, Search, Info, X, LayoutGrid, List, UtensilsCrossed, MapPin, Store, Phone, Lock, Sparkles, ChevronRight, Eye, MessageSquareOff, Globe, AlertCircle } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
-import { mockRestaurant, mockCategories, mockProducts } from '../data/mockMenu';
+import React, { useState, useEffect, useMemo } from 'react';
+import { useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { translateCategoryName, translateProduct, translateRestaurantDescription } from '../utils/autoTranslate';
-import React from 'react';
+import { 
+  Search, 
+  Store,
+  ChefHat,
+  MessageCircle,
+  Clock,
+  ExternalLink,
+  ChevronRight,
+  Info,
+  Plus,
+  MapPin
+} from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
+import { Restaurant, Category, Product } from '../types';
+import { MenuHeader } from '../components/menu/MenuHeader';
+import { MenuProductCard } from '../components/menu/MenuProductCard';
 
-export default function PublicMenu({ isDemo = false }: { isDemo?: boolean }) {
+export default function PublicMenu() {
   const { slug } = useParams();
   const { t, i18n } = useTranslation();
   const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
-  const [cart, setCart] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
-  const [isCartOpen, setIsCartOpen] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [viewTemplate, setViewTemplate] = useState<'list' | 'grid'>('list');
-  const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
-  const [langMenuOpen, setLangMenuOpen] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [activeCategory, setActiveCategory] = useState<string>('all');
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [showInfo, setShowInfo] = useState(false);
 
   useEffect(() => {
     const fetchMenu = async () => {
-      if (isDemo) {
-        setRestaurant(mockRestaurant);
-        setCategories(mockCategories);
-        setProducts(mockProducts);
-        setViewTemplate(mockRestaurant.template as 'list' | 'grid');
-        document.title = t('menu.live_demo') + " - " + mockRestaurant.name;
-        setLoading(false);
-        return;
-      }
-
+      setLoading(true);
       try {
         const res = await fetch(`/api/restaurant/menu/${slug}`);
         const data = await res.json();
+        
         if (res.ok) {
-          const rest = data.restaurant ? {
-            ...data.restaurant,
-            whatsappNumber: data.restaurant.whatsappNumber || data.restaurant.whatsapp_number
-          } : null;
-          setRestaurant(rest);
-          
-          if (rest) {
-            // Set initial language if not already set or if different from default
-            if (rest.defaultLanguage && !localStorage.getItem('i18nextLng')) {
-              i18n.changeLanguage(rest.defaultLanguage);
-            }
-          }
-
-          if (data.restaurant?.name) {
-            document.title = data.restaurant.name;
-          }
+          setRestaurant(data.restaurant);
           setCategories(data.categories || []);
           setProducts(data.products || []);
-          if (data.restaurant?.template) {
-            setViewTemplate(data.restaurant.template as 'list' | 'grid');
+          
+          if (data.restaurant.defaultLanguage) {
+            i18n.changeLanguage(data.restaurant.defaultLanguage);
           }
+          if (data.restaurant.name) {
+            document.title = `${data.restaurant.name} | Digital Menu`;
+          }
+        } else {
+          setError(data.error || 'Menu not found');
         }
       } catch (err) {
-        console.error(err);
+        setError('Failed to load menu');
       } finally {
         setLoading(false);
       }
     };
     fetchMenu();
-  }, [slug]);
+  }, [slug, i18n]);
 
-  const [alertMessage, setAlertMessage] = useState<string | null>(null);
-
-  const enabledLanguages = restaurant?.languages ? restaurant.languages.split(',').map(s => s.trim()) : ['en'];
-  const availableLanguages = [
-    { code: 'en', label: 'English' },
-    { code: 'fr', label: 'Français' },
-    { code: 'ar', label: 'العربية' }
-  ].filter(l => enabledLanguages.includes(l.code));
-
-  const currentLang = availableLanguages.find(l => l.code === i18n.language) || availableLanguages[0];
-
-  const changeLanguage = (code: string) => {
-    if (!enabledLanguages.includes(code) || (enabledLanguages.length === 1 && code !== enabledLanguages[0])) {
-      setAlertMessage("You must upload the menu in English, France, or Arabic first!");
-      setTimeout(() => setAlertMessage(null), 4000);
-      setLangMenuOpen(false);
-      return;
-    }
-    i18n.changeLanguage(code);
-    localStorage.setItem('menu_dash_lang_selected', 'true');
-    setLangMenuOpen(false);
-  };
-
-  const isRTL = i18n.language === 'ar';
-
-  const hasWhatsApp = Boolean(restaurant?.whatsappNumber && restaurant.whatsappNumber.trim() !== '');
-
-  const addToCart = (product: Product) => {
-    setCart((prev) => {
-      const existing = prev.find((item) => item.id === product.id);
-      if (existing) {
-        return prev.map((item) => item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item);
-      }
-      return [...prev, { ...product, quantity: 1 }];
+  const filteredProducts = useMemo(() => {
+    return products.filter(p => {
+      const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                           p.description?.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesCategory = activeCategory === 'all' || p.categoryId === activeCategory;
+      return matchesSearch && matchesCategory;
     });
+  }, [products, searchQuery, activeCategory]);
+
+  const getLanguageOptions = () => {
+    if (!restaurant?.languages) return ['en'];
+    return restaurant.languages.split(',');
   };
-
-  const removeFromCart = (productId: string) => {
-    setCart((prev) => {
-      const existing = prev.find((item) => item.id === productId);
-      if (existing && existing.quantity > 1) {
-        return prev.map((item) => item.id === productId ? { ...item, quantity: item.quantity - 1 } : item);
-      }
-      return prev.filter((item) => item.id !== productId);
-    });
-  };
-
-  const total = cart.reduce((sum, item) => sum + (parseFloat(item.price) * item.quantity), 0);
-
-  const handleCheckout = () => {
-    if (!restaurant?.whatsappNumber) return;
-    
-    let message = `*${t('menu.your_order')} from ${restaurant.name}*\n\n`;
-    cart.forEach((item) => {
-      message += `• ${item.quantity}x ${item.name} - ${restaurant.currency} ${(parseFloat(item.price) * item.quantity).toFixed(2)}\n`;
-    });
-    message += `\n*${t('menu.total')}: ${restaurant.currency} ${total.toFixed(2)}*`;
-    
-    const whatsappUrl = `https://wa.me/${restaurant.whatsappNumber}?text=${encodeURIComponent(message)}`;
-    window.open(whatsappUrl, '_blank');
-  };
-
-  const getProductPrice = (p: Product) => {
-    const val = typeof p.price === 'number' ? p.price : parseFloat(String(p.price || '0'));
-    return isNaN(val) ? '0.00' : val.toFixed(2);
-  };
-
-  // Filter products by search term
-  const searchFilteredProducts = products.filter((p: any) => {
-    if (!search.trim()) return true;
-    const q = search.toLowerCase();
-    const translated = translateProduct(p, i18n.language);
-    return p.name.toLowerCase().includes(q) || 
-           (p.description && p.description.toLowerCase().includes(q)) ||
-           translated.name.toLowerCase().includes(q) ||
-           (translated.description && translated.description.toLowerCase().includes(q));
-  });
 
   if (loading) return (
-    <div className="min-h-screen flex items-center justify-center bg-white">
-      <div className="animate-pulse text-orange-500 font-bold text-2xl flex items-center gap-2">
-        <UtensilsCrossed size={28} /> {t('menu.powered_by')}
+    <div className="min-h-screen flex flex-col items-center justify-center bg-white gap-6">
+      <div className="relative">
+        <div className="w-16 h-16 border-4 border-orange-100 rounded-full"></div>
+        <div className="w-16 h-16 border-4 border-orange-500 border-t-transparent rounded-full animate-spin absolute inset-0"></div>
       </div>
+      <p className="text-orange-500 font-black tracking-widest uppercase text-xs animate-pulse">Loading Menu...</p>
     </div>
   );
 
-  if (!restaurant) return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-neutral-50 text-center">
-      <div className="w-16 h-16 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center mb-4">
-        <Store size={32} />
+  if (error || !restaurant) return (
+    <div className="min-h-screen flex flex-col items-center justify-center bg-neutral-50 p-6 text-center">
+      <div className="w-20 h-20 bg-rose-50 text-rose-500 rounded-[2rem] flex items-center justify-center mb-6">
+        <ChefHat size={40} />
       </div>
-      <h1 className="text-2xl font-bold text-neutral-800">{t('menu.menu_not_found')}</h1>
-      <p className="text-neutral-500 text-sm mt-1">{t('menu.menu_not_found_desc')}</p>
+      <h1 className="text-2xl font-black text-neutral-900 mb-2">{error || 'Menu Not Found'}</h1>
+      <p className="text-neutral-500 mb-8 max-w-xs">{t('menu.not_found_desc')}</p>
+      <a href="/" className="bg-neutral-900 text-white px-8 py-3 rounded-2xl font-black transition-transform active:scale-95">
+        Go Back
+      </a>
     </div>
   );
-
-  const isFreePlan = !restaurant?.plan || restaurant.plan === 'free';
-  const FREE_CATEGORY_LIMIT = 2;
-  const FREE_PRODUCT_PER_CATEGORY_LIMIT = 2;
-
-  // Helper to render individual product card
-  const renderProductCard = (product: Product, isLocked: boolean = false) => {
-    const { name, description } = translateProduct(product, i18n.language);
-    return (
-      <div
-        key={product.id}
-        onClick={isLocked ? () => setIsUpgradeModalOpen(true) : undefined}
-        className={`bg-white rounded-3xl border shadow-xs transition-all overflow-hidden relative flex ${
-          viewTemplate === 'grid' ? 'flex-col' : 'flex-row items-center p-4 gap-4'
-        } ${
-          isLocked 
-            ? 'border-amber-300/80 bg-neutral-50/90 cursor-pointer hover:border-amber-500 hover:shadow-md' 
-            : 'border-neutral-200/80 hover:shadow-md'
-        }`}
-      >
-        {/* Product Card Content - Blurred when locked */}
-        <div className={`flex-1 flex ${viewTemplate === 'grid' ? 'flex-col' : 'flex-row items-center gap-4'} ${
-          isLocked ? 'filter blur-[4px] grayscale-[35%] opacity-50 select-none pointer-events-none' : ''
-        }`}>
-          <div className={
-            viewTemplate === 'grid' 
-              ? 'w-full aspect-square bg-neutral-100 overflow-hidden relative' 
-              : 'w-24 h-24 rounded-2xl flex-shrink-0 bg-neutral-100 overflow-hidden relative'
-          }>
-            {product.imageUrl ? (
-              <img 
-                src={product.imageUrl} 
-                alt={name} 
-                className="w-full h-full object-cover"
-                referrerPolicy="no-referrer"
-                onError={(e) => {
-                  (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=300';
-                }}
-              />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center bg-orange-50 text-orange-500 font-extrabold text-2xl">
-                {name.charAt(0)}
-              </div>
-            )}
-          </div>
-
-          <div className="flex-1 flex flex-col gap-1 p-2 sm:p-3">
-            <h3 className="font-bold text-neutral-900 text-base">{name}</h3>
-            {description && <p className="text-xs text-neutral-500 line-clamp-2 leading-relaxed">{description}</p>}
-            <div className="mt-2 flex items-center justify-between">
-              <span className="font-black text-orange-600 text-base">
-                {restaurant.currency} {getProductPrice(product)}
-              </span>
-              {hasWhatsApp && (
-                <button
-                  onClick={() => addToCart({ ...product, name, description })}
-                  className="bg-neutral-900 text-white p-2.5 rounded-xl hover:bg-neutral-800 transition-colors shadow-sm active:scale-95"
-                  title={t('menu.add_to_order')}
-                >
-                  <Plus size={18} />
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-
-      {/* Lock Overlay when Item is Locked */}
-      {isLocked && (
-        <div className="absolute inset-0 z-20 bg-neutral-900/15 backdrop-blur-[1px] flex flex-col items-center justify-center p-3 text-center">
-          <div className="bg-neutral-900/95 text-white border border-neutral-700/80 px-3.5 py-2 rounded-2xl shadow-xl flex items-center gap-2.5 hover:scale-105 transition-transform">
-            <div className="w-7 h-7 rounded-xl bg-amber-500 text-neutral-950 flex items-center justify-center shrink-0 shadow-xs font-bold">
-              <Lock size={14} />
-            </div>
-            <div className="text-left">
-              <span className="block text-[10px] text-amber-400 font-black uppercase tracking-wider">{t('menu.free_plan_limit')}</span>
-              <span className="block text-xs font-extrabold text-white">{t('menu.tap_to_unlock')}</span>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-};
-
-  // Group products by category
-  const categoriesWithProducts = categories.map((cat, catIndex) => {
-    const isCategoryLocked = isFreePlan && catIndex >= FREE_CATEGORY_LIMIT;
-    const catProds = searchFilteredProducts.filter((p: any) => (p.categoryId || p.category_id) === cat.id);
-    
-    const items = catProds.map((product, pIndex) => {
-      const isLocked = isCategoryLocked || (isFreePlan && pIndex >= FREE_PRODUCT_PER_CATEGORY_LIMIT);
-      return { product, isLocked };
-    });
-
-    return { ...cat, isCategoryLocked, items };
-  }).filter(c => c.items.length > 0);
-
-  // Uncategorized products
-  const categoryIdsSet = new Set(categories.map(c => c.id));
-  const uncategorizedProducts = searchFilteredProducts.filter((p: any) => {
-    const catId = p.categoryId || p.category_id;
-    return !catId || !categoryIdsSet.has(catId);
-  }).map((product, pIndex) => {
-    const isLocked = isFreePlan && pIndex >= FREE_PRODUCT_PER_CATEGORY_LIMIT;
-    return { product, isLocked };
-  });
 
   return (
-    <div className={`min-h-screen bg-neutral-50 pb-32 ${isRTL ? 'rtl' : 'ltr'}`} dir={isRTL ? 'rtl' : 'ltr'}>
-      {isDemo && (
-        <div className="bg-orange-500 text-white text-[10px] font-black uppercase tracking-widest py-1.5 text-center sticky top-0 z-[100] shadow-md flex items-center justify-center gap-2">
-          <Sparkles size={12} />
-          <span>{t('menu.live_demo')}</span>
-          <Link to="/register" className="ml-2 bg-white text-orange-600 px-2 py-0.5 rounded font-bold hover:bg-neutral-100 transition-colors">
-            {t('menu.create_own')}
-          </Link>
-        </div>
-      )}
-      
-      {/* Language Floating Selector */}
-      {availableLanguages.length > 1 && (
-        <div className={`fixed top-4 ${isRTL ? 'left-4' : 'right-4'} z-[110]`}>
-          <div className="relative">
-            <button
-              onClick={() => setLangMenuOpen(!langMenuOpen)}
-              className="bg-white/90 backdrop-blur-md border border-neutral-200 rounded-2xl p-2.5 shadow-lg flex items-center justify-center hover:border-orange-300 transition-all active:scale-95"
-              title="Select Language"
-            >
-              <Globe size={18} className="text-neutral-600" />
-            </button>
+    <div className="min-h-screen bg-[#fafafa] pb-24">
+      <MenuHeader 
+        restaurant={restaurant} 
+        languages={getLanguageOptions()} 
+        currentLang={i18n.language} 
+        onLangChange={(lang) => i18n.changeLanguage(lang)}
+        onShowInfo={() => setShowInfo(true)}
+      />
 
-            <AnimatePresence>
-              {langMenuOpen && (
-                <>
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    onClick={() => setLangMenuOpen(false)}
-                    className="fixed inset-0 z-[-1]"
-                  />
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.9, y: -10 }}
-                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.9, y: -10 }}
-                    className={`absolute top-full mt-2 ${isRTL ? 'left-0' : 'right-0'} w-40 bg-white rounded-2xl shadow-2xl border border-neutral-100 p-2 overflow-hidden`}
-                  >
-                    {availableLanguages.map(lang => (
-                      <button
-                        key={lang.code}
-                        onClick={() => changeLanguage(lang.code)}
-                        className={`w-full flex items-center px-3 py-2.5 rounded-xl text-sm font-bold transition-colors ${
-                          i18n.language === lang.code 
-                            ? 'bg-orange-50 text-orange-600' 
-                            : 'text-neutral-700 hover:bg-neutral-50'
-                        }`}
-                      >
-                        {lang.label}
-                      </button>
-                    ))}
-                  </motion.div>
-                </>
-              )}
-            </AnimatePresence>
-          </div>
-        </div>
-      )}
-
-      {/* Restaurant Hero Banner & Brand Card */}
-      <div className="bg-white border-b border-neutral-200/80 shadow-xs mb-2">
-        {/* Banner Cover Image */}
-        <div className="h-36 sm:h-52 w-full bg-neutral-900 relative overflow-hidden">
-          {restaurant.coverUrl ? (
-            <img 
-              src={restaurant.coverUrl} 
-              alt={restaurant.name} 
-              className="w-full h-full object-cover"
-            />
-          ) : (
-            <div className="w-full h-full bg-gradient-to-r from-orange-600 via-amber-600 to-orange-500 relative">
-              <img 
-                src="https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=1200&q=80" 
-                alt="Food Banner" 
-                className="w-full h-full object-cover opacity-25 mix-blend-overlay"
-              />
-            </div>
-          )}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
-        </div>
-
-        {/* Brand Information Header Card */}
-        <div className="max-w-3xl mx-auto px-4 pb-6">
-          <div className="flex flex-col sm:flex-row items-start sm:items-end justify-between gap-4 -mt-12 sm:-mt-14 relative z-10">
-            {/* Logo Avatar */}
-            <div className={`w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-white p-1 shadow-xl ring-4 ring-white shrink-0 overflow-hidden ${isRTL ? 'mr-0' : 'mr-0'}`}>
-              <div className="w-full h-full rounded-xl bg-gradient-to-br from-orange-500 to-amber-500 text-white flex items-center justify-center overflow-hidden">
-                {restaurant.logoUrl ? (
-                  <img src={restaurant.logoUrl} alt={restaurant.name} className="w-full h-full object-cover" />
-                ) : (
-                  <UtensilsCrossed size={36} className="text-white" />
-                )}
-              </div>
-            </div>
-
-            {/* Quick Action Badges / Status */}
-            {hasWhatsApp && (
-              <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto sm:mb-1">
-                <span className="inline-flex items-center gap-1.5 bg-neutral-900 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-xs">
-                  <Phone size={12} className="text-emerald-400" />
-                  {t('menu.whatsapp_direct')}
-                </span>
-              </div>
-            )}
-          </div>
-
-          {/* Restaurant Title & Info */}
-          <div className="mt-4 space-y-2">
-            <h1 className="text-2xl sm:text-3xl font-black text-neutral-900 tracking-tight leading-tight">
-              {restaurant.name}
-            </h1>
-
-            {restaurant.description && (
-              <p className="text-neutral-600 text-xs sm:text-sm leading-relaxed max-w-2xl">
-                {translateRestaurantDescription(restaurant, i18n.language)}
-              </p>
-            )}
-
-            {restaurant.address && (
-              <div className="flex flex-wrap items-center gap-y-2 gap-x-4 text-xs font-medium text-neutral-500 pt-1">
-                <span className="flex items-center gap-1.5 text-neutral-600">
-                  <MapPin size={14} className="text-neutral-400" />
-                  {restaurant.address}
-                </span>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-
-      <div className="max-w-3xl mx-auto px-4">
-        {/* Free Plan Banner Notice */}
-        {alertMessage && (
-          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-2xl mb-4 text-sm font-bold flex items-center gap-2 shadow-md animate-bounce">
-            <AlertCircle size={18} className="shrink-0 text-red-500" />
-            <span>{alertMessage}</span>
-          </div>
-        )}
-        {isFreePlan && (
-          <div className="bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-amber-500/10 border border-amber-300/80 rounded-2xl p-3.5 mb-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-xl bg-amber-500 text-white flex items-center justify-center shrink-0 font-bold shadow-xs">
-                <Lock size={16} />
-              </div>
-              <div>
-                <h4 className="text-xs font-black text-neutral-900 uppercase tracking-wider flex items-center gap-1.5">
-                  <span>{t('menu.free_plan_limit')}</span>
-                  <span className="bg-amber-200 text-amber-900 text-[10px] px-1.5 py-0.5 rounded font-extrabold">{t('menu.limit_desc')}</span>
-                </h4>
-                <p className="text-xs text-neutral-600 font-medium mt-0.5">
-                  {t('menu.limit_details')}
-                </p>
-              </div>
-            </div>
-            <button
-              onClick={() => setIsUpgradeModalOpen(true)}
-              className="w-full sm:w-auto bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold px-4 py-2 rounded-xl transition-all shadow-xs shrink-0 flex items-center justify-center gap-1.5"
-            >
-              <Sparkles size={14} />
-              <span>{t('menu.upgrade_info')}</span>
-            </button>
-          </div>
-        )}
-
-        {/* Sticky Header Bar for Search & Categories */}
-        <div className="sticky top-0 bg-neutral-50/95 backdrop-blur-md pt-4 pb-3 z-40 space-y-3 border-b border-neutral-200/60 mb-6 shadow-xs">
-          {/* Search Bar & View Toggle */}
-          <div className="flex items-center gap-2">
-            <div className="relative flex-1">
-              <Search className={`absolute ${isRTL ? 'right-4' : 'left-4'} top-1/2 -translate-y-1/2 text-neutral-400`} size={18} />
+      {/* Search & Categories Bar */}
+      <div className="sticky top-0 z-30 bg-white/80 backdrop-blur-xl border-b border-neutral-100/50">
+        <div className="max-w-screen-xl mx-auto">
+          <div className="p-4 sm:p-6 space-y-4">
+            {/* Search */}
+            <div className="relative group">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400 group-focus-within:text-orange-500 transition-colors" size={20} />
               <input
-                type="text"
-                placeholder={t('menu.search_placeholder')}
-                className={`w-full ${isRTL ? 'pr-11 pl-4' : 'pl-11 pr-4'} py-2.5 rounded-2xl border border-neutral-200 focus:border-orange-500 focus:ring-4 focus:ring-orange-100 outline-none transition-all bg-white text-sm`}
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                className="w-full pl-12 pr-6 py-4 rounded-[1.5rem] bg-neutral-50 border-2 border-neutral-50 focus:border-orange-500 focus:bg-white focus:ring-8 focus:ring-orange-50 outline-none transition-all font-bold text-sm"
+                placeholder={t('common.search')}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
-            <button
-              type="button"
-              onClick={() => setViewTemplate(prev => prev === 'list' ? 'grid' : 'list')}
-              className="p-2.5 bg-white border border-neutral-200 hover:border-orange-300 rounded-2xl text-neutral-700 hover:text-orange-600 transition-all shadow-xs flex items-center justify-center shrink-0"
-              title={`Switch to ${viewTemplate === 'list' ? 'Grid' : 'List'} View`}
-            >
-              {viewTemplate === 'list' ? (
-                <LayoutGrid size={20} className="text-neutral-700" />
-              ) : (
-                <List size={20} className="text-neutral-700" />
-              )}
-            </button>
-          </div>
 
-          {/* Categories Horizontal Scroll */}
-          <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
-            <button
-              onClick={() => setSelectedCategory(null)}
-              className={`whitespace-nowrap px-5 py-2 rounded-full font-bold text-xs transition-all ${
-                selectedCategory === null 
-                  ? 'bg-neutral-900 text-white shadow-md' 
-                  : 'bg-white text-neutral-600 border border-neutral-200 hover:border-neutral-300'
-              }`}
-            >
-              {t('menu.all_items')}
-            </button>
-            {categories.map((cat, index) => {
-              const isCategoryLocked = isFreePlan && index >= FREE_CATEGORY_LIMIT;
-              return (
+            {/* Category Nav */}
+            <div className="flex gap-2 overflow-x-auto no-scrollbar pb-2 -mx-4 px-4 sm:-mx-6 sm:px-6">
+              <button
+                onClick={() => setActiveCategory('all')}
+                className={`whitespace-nowrap px-6 py-3 rounded-full font-black text-xs uppercase tracking-widest transition-all ${
+                  activeCategory === 'all' 
+                    ? 'bg-neutral-900 text-white shadow-xl shadow-neutral-900/20' 
+                    : 'bg-white text-neutral-500 border border-neutral-100 hover:border-neutral-200'
+                }`}
+              >
+                {t('products.all_items')}
+              </button>
+              {categories.map(cat => (
                 <button
                   key={cat.id}
-                  onClick={() => {
-                    if (isCategoryLocked) {
-                      setIsUpgradeModalOpen(true);
-                    } else {
-                      setSelectedCategory(cat.id);
-                    }
-                  }}
-                  className={`whitespace-nowrap px-4 py-2 rounded-full font-bold text-xs transition-all flex items-center gap-1.5 ${
-                    isCategoryLocked
-                      ? 'bg-amber-50/90 text-neutral-600 border border-amber-300/80 cursor-pointer hover:bg-amber-100 hover:border-amber-400'
-                      : selectedCategory === cat.id 
-                        ? 'bg-neutral-900 text-white shadow-md' 
-                        : 'bg-white text-neutral-600 border border-neutral-200 hover:border-neutral-300'
+                  onClick={() => setActiveCategory(cat.id)}
+                  className={`whitespace-nowrap px-6 py-3 rounded-full font-black text-xs uppercase tracking-widest transition-all ${
+                    activeCategory === cat.id 
+                      ? 'bg-orange-500 text-white shadow-xl shadow-orange-500/20' 
+                      : 'bg-white text-neutral-500 border border-neutral-100 hover:border-neutral-200'
                   }`}
                 >
-                  {isCategoryLocked && <Lock size={12} className="text-amber-600 shrink-0" />}
-                  <span className={isCategoryLocked ? 'filter blur-[1.5px] select-none' : ''}>{translateCategoryName(cat, i18n.language)}</span>
+                  {i18n.language === 'ar' ? cat.name_ar || cat.name : i18n.language === 'fr' ? cat.name_fr || cat.name : cat.name_en || cat.name}
                 </button>
-              );
-            })}
+              ))}
+            </div>
           </div>
         </div>
-
-        {/* Product List Breakdown */}
-        {searchFilteredProducts.length === 0 ? (
-          <div className="bg-white rounded-3xl p-12 text-center border border-neutral-200 shadow-xs">
-            <div className="w-12 h-12 bg-orange-50 text-orange-500 rounded-full flex items-center justify-center mx-auto mb-3">
-              <Search size={24} />
-            </div>
-            <p className="text-lg font-bold text-neutral-800">{t('menu.no_dishes')}</p>
-            <p className="text-neutral-400 text-xs mt-1">{t('menu.try_another')}</p>
-          </div>
-        ) : selectedCategory === null ? (
-          /* "ALL" VIEW: Categorized Breakdown */
-          <div className="space-y-10">
-            {categoriesWithProducts.map((cat) => (
-              <div key={cat.id} className="space-y-4">
-                <div className="flex items-center justify-between border-b border-neutral-200 pb-2">
-                  <div className="flex items-center gap-3">
-                    <h2 className="text-xl font-extrabold text-neutral-900 tracking-tight flex items-center gap-2">
-                      <span className={cat.isCategoryLocked ? 'filter blur-[2.5px] select-none' : ''}>{translateCategoryName(cat, i18n.language)}</span>
-                      {cat.isCategoryLocked && (
-                        <span className="inline-flex items-center gap-1 bg-amber-100 text-amber-900 text-[11px] font-bold px-2.5 py-0.5 rounded-full border border-amber-300/80 shrink-0">
-                          <Lock size={12} className="text-amber-700" /> {t('menu.locked_category')}
-                        </span>
-                      )}
-                    </h2>
-                  </div>
-                  {cat.isCategoryLocked && (
-                    <button
-                      onClick={() => setIsUpgradeModalOpen(true)}
-                      className="text-xs font-bold text-orange-600 hover:underline flex items-center gap-1"
-                    >
-                      <span>{t('menu.upgrade_to_pro')}</span>
-                      <ChevronRight size={14} className={isRTL ? 'rotate-180' : ''} />
-                    </button>
-                  )}
-                </div>
-
-                <div className={viewTemplate === 'grid' ? 'grid grid-cols-2 sm:grid-cols-3 gap-4' : 'space-y-3'}>
-                  {cat.items.map(({ product, isLocked }) => renderProductCard(product, isLocked))}
-                </div>
-              </div>
-            ))}
-
-            {/* Uncategorized items section if any */}
-            {uncategorizedProducts.length > 0 && (
-              <div className="space-y-4">
-                <div className="flex items-center justify-between border-b border-neutral-200 pb-2">
-                  <div className="flex items-center gap-3">
-                    <h2 className="text-xl font-extrabold text-neutral-900 tracking-tight">{t('menu.other_items')}</h2>
-                  </div>
-                </div>
-
-                <div className={viewTemplate === 'grid' ? 'grid grid-cols-2 sm:grid-cols-3 gap-4' : 'space-y-3'}>
-                  {uncategorizedProducts.map(({ product, isLocked }) => renderProductCard(product, isLocked))}
-                </div>
-              </div>
-            )}
-          </div>
-        ) : (
-          /* SINGLE CATEGORY VIEW */
-          <div className="space-y-4">
-            {(() => {
-              const catIndex = categories.findIndex(c => c.id === selectedCategory);
-              const isCategoryLocked = isFreePlan && catIndex >= FREE_CATEGORY_LIMIT;
-              const currentCat = categories.find(c => c.id === selectedCategory);
-              const catProds = searchFilteredProducts.filter((p: any) => (p.categoryId || p.category_id) === selectedCategory);
-
-              return (
-                <>
-                  <div className="flex items-center justify-between border-b border-neutral-200 pb-2">
-                    <div className="flex items-center gap-3">
-                      <h2 className="text-xl font-extrabold text-neutral-900 tracking-tight flex items-center gap-2">
-                        <span className={isCategoryLocked ? 'filter blur-[2.5px] select-none' : ''}>{currentCat ? translateCategoryName(currentCat, i18n.language) : t('menu.category_items')}</span>
-                        {isCategoryLocked && (
-                          <span className="inline-flex items-center gap-1 bg-amber-100 text-amber-900 text-[11px] font-bold px-2.5 py-0.5 rounded-full border border-amber-300/80 shrink-0">
-                            <Lock size={12} className="text-amber-700" /> {t('menu.locked_category')}
-                          </span>
-                        )}
-                      </h2>
-                    </div>
-                    {isCategoryLocked && (
-                      <button
-                        onClick={() => setIsUpgradeModalOpen(true)}
-                        className="text-xs font-bold text-orange-600 hover:underline flex items-center gap-1"
-                      >
-                        <span>{t('menu.upgrade_to_pro')}</span>
-                        <ChevronRight size={14} className={isRTL ? 'rotate-180' : ''} />
-                      </button>
-                    )}
-                  </div>
-
-                  {catProds.length === 0 ? (
-                    <div className="bg-white rounded-3xl p-8 text-center border border-neutral-200">
-                      <p className="text-sm font-semibold text-neutral-500">{t('menu.no_dishes_category')}</p>
-                    </div>
-                  ) : (
-                    <div className={viewTemplate === 'grid' ? 'grid grid-cols-2 sm:grid-cols-3 gap-4' : 'space-y-3'}>
-                      {catProds.map((product, pIndex) => {
-                        const isLocked = isCategoryLocked || (isFreePlan && pIndex >= FREE_PRODUCT_PER_CATEGORY_LIMIT);
-                        return renderProductCard(product, isLocked);
-                      })}
-                    </div>
-                  )}
-                </>
-              );
-            })()}
-          </div>
-        )}
       </div>
 
-      {/* Footer / Powered By */}
-      <footer className="max-w-3xl mx-auto px-4 mt-16 text-center pb-8">
-        <Link 
-          to="/" 
-          className="inline-flex items-center gap-1.5 text-xs font-medium text-neutral-400 hover:text-orange-600 transition-colors py-2 px-4 rounded-full bg-white/80 border border-neutral-200/80 shadow-xs hover:shadow-sm"
-        >
-          <span>{t('menu.made_with')}</span>
-          <span className="font-extrabold text-neutral-800 flex items-center gap-1">
-            <UtensilsCrossed size={12} className="text-orange-500" /> {t('menu.powered_by')}
-          </span>
-        </Link>
+      {/* Products Display */}
+      <main className="max-w-screen-xl mx-auto p-4 sm:p-6 lg:p-8">
+        <div className="space-y-12">
+          {categories.filter(cat => activeCategory === 'all' || activeCategory === cat.id).map(cat => {
+            const catProducts = filteredProducts.filter(p => p.categoryId === cat.id);
+            if (catProducts.length === 0) return null;
+            
+            return (
+              <section key={cat.id} className="space-y-6">
+                <div className="flex items-center gap-4">
+                  <div className="h-px flex-1 bg-neutral-100"></div>
+                  <h2 className="text-xl sm:text-2xl font-black text-neutral-900 tracking-tight px-4">
+                    {i18n.language === 'ar' ? cat.name_ar || cat.name : i18n.language === 'fr' ? cat.name_fr || cat.name : cat.name_en || cat.name}
+                  </h2>
+                  <div className="h-px flex-1 bg-neutral-100"></div>
+                </div>
+                
+                <div className="grid md:grid-cols-2 gap-4 sm:gap-6">
+                  {catProducts.map(product => (
+                    <MenuProductCard 
+                      key={product.id}
+                      product={product}
+                      currency={restaurant.currency}
+                      onClick={setSelectedProduct}
+                    />
+                  ))}
+                </div>
+              </section>
+            );
+          })}
+        </div>
+
+        {filteredProducts.length === 0 && (
+          <div className="py-32 text-center space-y-6">
+            <div className="w-24 h-24 bg-neutral-50 rounded-full flex items-center justify-center mx-auto text-neutral-200">
+              <Search size={48} />
+            </div>
+            <div>
+              <h3 className="text-xl font-black text-neutral-900">{t('menu.no_results')}</h3>
+              <p className="text-neutral-500 font-medium">{t('menu.try_different_search')}</p>
+            </div>
+          </div>
+        )}
+      </main>
+
+      {/* Footer Branding */}
+      <footer className="py-12 border-t border-neutral-100 text-center space-y-4">
+        <p className="text-[10px] uppercase font-black tracking-[0.3em] text-neutral-300">Powered by</p>
+        <div className="flex items-center justify-center gap-2 opacity-50 grayscale hover:grayscale-0 transition-all cursor-pointer">
+          <Store size={18} className="text-orange-500" />
+          <span className="font-black text-neutral-900">MenuQuick</span>
+        </div>
       </footer>
 
-      {/* Cart Summary Bar */}
-      {hasWhatsApp && cart.length > 0 && (
-        <div className="fixed bottom-6 left-4 right-4 max-w-md mx-auto z-50">
-          <motion.button
-            initial={{ y: 100 }}
-            animate={{ y: 0 }}
-            onClick={() => setIsCartOpen(true)}
-            className="w-full bg-neutral-900 text-white p-4 rounded-3xl flex items-center justify-between shadow-2xl hover:bg-neutral-800 transition-colors active:scale-98"
+      {/* Bottom Floating Bar */}
+      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 w-full max-w-sm px-6">
+        <div className="bg-neutral-900/90 backdrop-blur-xl text-white p-2 rounded-3xl shadow-2xl flex items-center justify-between border border-white/10">
+          <button 
+            onClick={() => setShowInfo(true)}
+            className="flex items-center gap-2 px-6 py-3 font-black text-xs uppercase tracking-widest hover:bg-white/10 rounded-2xl transition-colors"
           >
-            <div className="flex items-center gap-3">
-              <div className="bg-orange-500 w-8 h-8 rounded-full flex items-center justify-center font-extrabold text-sm text-white shadow-sm">
-                {cart.reduce((sum, item) => sum + item.quantity, 0)}
-              </div>
-              <span className="font-bold text-base">{t('menu.view_cart')}</span>
-            </div>
-            <span className="font-black text-lg">{restaurant.currency} {total.toFixed(2)}</span>
-          </motion.button>
+            <Info size={16} className="text-orange-400" />
+            {t('menu.info')}
+          </button>
+          {restaurant.whatsappNumber && (
+            <a 
+              href={`https://wa.me/${restaurant.whatsappNumber}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="bg-orange-500 hover:bg-orange-600 px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-widest flex items-center gap-2 transition-all active:scale-95 shadow-lg shadow-orange-500/20"
+            >
+              <MessageCircle size={16} />
+              {t('menu.order')}
+            </a>
+          )}
         </div>
-      )}
+      </div>
 
-      {/* Cart Sidebar/Modal */}
+      {/* Product Detail Modal */}
       <AnimatePresence>
-        {isCartOpen && (
-          <>
-            <motion.div
+        {selectedProduct && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              onClick={() => setIsCartOpen(false)}
-              className="fixed inset-0 bg-neutral-900/60 backdrop-blur-sm z-[60]"
+              onClick={() => setSelectedProduct(null)}
+              className="absolute inset-0 bg-black/80 backdrop-blur-md"
             />
-            <motion.div
-              initial={{ x: isRTL ? '-100%' : '100%' }}
-              animate={{ x: 0 }}
-              exit={{ x: isRTL ? '-100%' : '100%' }}
-              className={`fixed ${isRTL ? 'left-0' : 'right-0'} top-0 bottom-0 w-full max-w-md bg-white z-[70] flex flex-col shadow-2xl`}
-            >
-              <div className="p-6 border-b border-neutral-100 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <ShoppingCart className="text-orange-500" size={24} />
-                  <h2 className="text-2xl font-extrabold text-neutral-900">{t('menu.your_order')}</h2>
-                </div>
-                <button onClick={() => setIsCartOpen(false)} className="p-2 hover:bg-neutral-100 rounded-full text-neutral-500">
-                  <X size={24} />
-                </button>
-              </div>
-
-              <div className="flex-1 overflow-y-auto p-6 space-y-4">
-                {cart.map((item) => (
-                  <div key={item.id} className="flex items-center gap-4 bg-neutral-50 p-3 rounded-2xl border border-neutral-100">
-                    {item.imageUrl ? (
-                      <img src={item.imageUrl} className="w-16 h-16 rounded-xl object-cover shrink-0" />
-                    ) : (
-                      <div className="w-16 h-16 rounded-xl bg-orange-100 text-orange-500 font-bold flex items-center justify-center shrink-0">
-                        {item.name.charAt(0)}
-                      </div>
-                    )}
-                    <div className="flex-1">
-                      <h4 className="font-bold text-sm text-neutral-900">{item.name}</h4>
-                      <p className="text-xs font-semibold text-orange-600 mt-0.5">{restaurant.currency} {parseFloat(item.price).toFixed(2)}</p>
-                    </div>
-                    <div className="flex items-center gap-2 bg-white p-1.5 rounded-xl border border-neutral-200">
-                      <button onClick={() => removeFromCart(item.id)} className="p-1 hover:bg-neutral-100 rounded-lg transition-colors text-neutral-700">
-                        <Minus size={14} />
-                      </button>
-                      <span className="font-bold text-sm w-5 text-center">{item.quantity}</span>
-                      <button onClick={() => addToCart(item)} className="p-1 hover:bg-neutral-100 rounded-lg transition-colors text-neutral-700">
-                        <Plus size={14} />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <div className="p-6 border-t border-neutral-100 space-y-4 bg-white">
-                <div className="flex justify-between items-center text-xl font-black text-neutral-900">
-                  <span>{t('menu.total')}</span>
-                  <span className="text-orange-600">{restaurant.currency} {total.toFixed(2)}</span>
-                </div>
-                <button
-                  onClick={handleCheckout}
-                  className="w-full bg-orange-500 text-white py-4 rounded-2xl font-bold text-lg flex items-center justify-center gap-3 hover:bg-orange-600 transition-all shadow-lg shadow-orange-500/20 active:scale-98"
-                >
-                  {t('menu.checkout')} <Send size={20} className={isRTL ? 'rotate-180' : ''} />
-                </button>
-              </div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
-      {/* Upgrade Modal for Locked Content */}
-      <AnimatePresence>
-        {isUpgradeModalOpen && (
-          <>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setIsUpgradeModalOpen(false)}
-              className="fixed inset-0 bg-neutral-900/60 backdrop-blur-sm z-[80]"
-            />
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[90%] max-w-md bg-white rounded-3xl p-6 sm:p-8 z-[90] shadow-2xl border border-neutral-100"
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="bg-white rounded-[3rem] w-full max-w-xl overflow-hidden relative shadow-2xl"
             >
-              <div className="flex items-center justify-between pb-4 border-b border-neutral-100">
-                <div className="flex items-center gap-2.5">
-                  <div className="bg-amber-100 text-amber-800 p-2.5 rounded-2xl">
-                    <Lock size={22} />
-                  </div>
-                  <div>
-                    <span className="bg-orange-100 text-orange-800 text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-md">{t('menu.free_plan_limit')}</span>
-                    <h3 className="text-lg font-black text-neutral-900 leading-tight">{t('menu.upgrade_to_pro')}</h3>
-                  </div>
-                </div>
-                <button onClick={() => setIsUpgradeModalOpen(false)} className="p-1.5 text-neutral-400 hover:text-neutral-700 rounded-full hover:bg-neutral-100">
-                  <X size={20} />
-                </button>
-              </div>
+              <button 
+                onClick={() => setSelectedProduct(null)}
+                className="absolute top-6 right-6 z-10 bg-black/20 hover:bg-black/40 text-white p-2 rounded-full backdrop-blur-md transition-colors"
+              >
+                <Plus size={24} className="rotate-45" />
+              </button>
 
-              <div className="py-5 space-y-4">
-                <p className="text-xs text-neutral-600 leading-relaxed font-medium">
-                  {t('menu.locked_item_desc', { name: restaurant.name })}
+              <div className="aspect-[4/3] bg-neutral-100 overflow-hidden">
+                {selectedProduct.imageUrl ? (
+                  <img 
+                    src={selectedProduct.imageUrl} 
+                    alt={selectedProduct.name} 
+                    className="w-full h-full object-cover"
+                    referrerPolicy="no-referrer"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-neutral-300">
+                    <ChefHat size={64} />
+                  </div>
+                )}
+              </div>
+              
+              <div className="p-8 space-y-6">
+                <div className="flex justify-between items-start gap-4">
+                  <div>
+                    <h2 className="text-3xl font-black text-neutral-900 tracking-tight">
+                      {i18n.language === 'ar' ? selectedProduct.name_ar || selectedProduct.name : i18n.language === 'fr' ? selectedProduct.name_fr || selectedProduct.name : selectedProduct.name_en || selectedProduct.name}
+                    </h2>
+                    <p className="text-orange-500 font-bold uppercase tracking-widest text-xs mt-1">
+                      {categories.find(c => c.id === selectedProduct.categoryId)?.name}
+                    </p>
+                  </div>
+                  <span className="text-2xl font-black text-neutral-900">{selectedProduct.price} {restaurant.currency}</span>
+                </div>
+                
+                <p className="text-neutral-500 font-medium leading-relaxed text-lg">
+                  {i18n.language === 'ar' ? selectedProduct.description_ar || selectedProduct.description : i18n.language === 'fr' ? selectedProduct.description_fr || selectedProduct.description : selectedProduct.description_en || selectedProduct.description}
                 </p>
 
-                <div className="bg-orange-50/80 border border-orange-200/80 rounded-2xl p-4 space-y-2.5">
-                  <h4 className="text-xs font-black text-orange-900 uppercase tracking-wider">{t('menu.pro_benefits_title')}</h4>
-                  <ul className="text-xs text-neutral-800 space-y-2">
-                    <li className="flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-orange-500 shrink-0" />
-                      <span><strong>{t('menu.benefit_unlimited_products')}</strong></span>
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-orange-500 shrink-0" />
-                      <span><strong>{t('menu.benefit_unlimited_categories')}</strong></span>
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-orange-500 shrink-0" />
-                      <span><strong>{t('menu.benefit_full_visibility')}</strong></span>
-                    </li>
-                  </ul>
-                </div>
-              </div>
-
-              <div className="pt-2 flex flex-col gap-2">
-                <Link
-                  to="/"
-                  className="w-full bg-neutral-900 hover:bg-neutral-800 text-white font-bold py-3.5 rounded-2xl text-xs text-center transition-all shadow-md"
-                >
-                  {t('menu.learn_more')}
-                </Link>
-                <button
-                  onClick={() => setIsUpgradeModalOpen(false)}
-                  className="w-full text-neutral-500 hover:text-neutral-800 font-semibold py-2 text-xs"
-                >
-                  {t('common.cancel')}
-                </button>
+                {restaurant.whatsappNumber && (
+                  <button 
+                    onClick={() => window.open(`https://wa.me/${restaurant.whatsappNumber}?text=${encodeURIComponent(`${t('menu.order_msg')} ${selectedProduct.name}`)}`, '_blank')}
+                    className="w-full bg-neutral-900 text-white py-5 rounded-[1.5rem] font-black text-lg hover:bg-neutral-800 transition-all active:scale-95 flex items-center justify-center gap-3"
+                  >
+                    <MessageCircle size={24} />
+                    {t('menu.order_now')}
+                  </button>
+                )}
               </div>
             </motion.div>
-          </>
+          </div>
+        )}
+
+        {/* Info Modal */}
+        {showInfo && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowInfo(false)}
+              className="absolute inset-0 bg-black/80 backdrop-blur-md"
+            />
+            <motion.div 
+              initial={{ opacity: 0, y: 100 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 100 }}
+              className="bg-white rounded-[3rem] w-full max-w-lg overflow-hidden relative shadow-2xl p-8 space-y-8"
+            >
+              <div className="flex justify-between items-center">
+                <h2 className="text-2xl font-black text-neutral-900">{t('menu.info')}</h2>
+                <button onClick={() => setShowInfo(false)} className="p-2 hover:bg-neutral-100 rounded-full">
+                  <Plus size={24} className="rotate-45" />
+                </button>
+              </div>
+
+              <div className="space-y-6">
+                <div className="flex gap-4 p-6 rounded-3xl bg-neutral-50">
+                  <MapPin size={24} className="text-orange-500 shrink-0" />
+                  <div>
+                    <h4 className="font-black text-sm uppercase tracking-widest text-neutral-400 mb-1">{t('menu.location')}</h4>
+                    <p className="font-bold text-neutral-800 leading-relaxed">{restaurant.address || 'Not available'}</p>
+                  </div>
+                </div>
+
+                <div className="flex gap-4 p-6 rounded-3xl bg-neutral-50">
+                  <Info size={24} className="text-orange-500 shrink-0" />
+                  <div>
+                    <h4 className="font-black text-sm uppercase tracking-widest text-neutral-400 mb-1">{t('menu.about')}</h4>
+                    <p className="font-bold text-neutral-800 leading-relaxed">{restaurant.description || 'Welcome to our digital menu!'}</p>
+                  </div>
+                </div>
+
+                {restaurant.whatsappNumber && (
+                  <div className="flex gap-4 p-6 rounded-3xl bg-neutral-50">
+                    <MessageCircle size={24} className="text-orange-500 shrink-0" />
+                    <div>
+                      <h4 className="font-black text-sm uppercase tracking-widest text-neutral-400 mb-1">{t('menu.whatsapp')}</h4>
+                      <p className="font-bold text-neutral-800">{restaurant.whatsappNumber}</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
     </div>
   );
 }
-
