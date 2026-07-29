@@ -10,7 +10,7 @@ import {
   sendNewUserAlert,
   updateRestaurantPlan,
   getAdminChatCount
-} from "./server/telegramBot";
+} from "../server/telegramBot";
 
 dotenv.config();
 

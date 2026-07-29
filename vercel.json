@@ -3,11 +3,11 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "rewrites": [
-    { "source": "/api/(.*)", "destination": "/server.ts" },
+    { "source": "/api/(.*)", "destination": "/api/server.ts" },
     { "source": "/((?!api/).*)", "destination": "/index.html" }
   ],
   "functions": {
-    "server.ts": {
+    "api/server.ts": {
       "maxDuration": 30
     }
   }
