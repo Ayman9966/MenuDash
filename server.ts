@@ -13,7 +13,7 @@ import {
   setTelegramWebhook,
   getTelegramWebhookInfo,
   handleTelegramCommand
-} from "./server/telegramBot";
+} from "./bot/telegramBot";
 
 dotenv.config();
 
