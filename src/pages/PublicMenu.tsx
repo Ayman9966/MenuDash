@@ -36,7 +36,7 @@ export default function PublicMenu({ isDemo = false }: { isDemo?: boolean }) {
       }
 
       try {
-        const res = await fetch(`/api/menu/${slug}`);
+        const res = await fetch(`/api/restaurant/menu/${slug}`);
         const data = await res.json();
         if (res.ok) {
           const rest = data.restaurant ? {

@@ -11,8 +11,11 @@ export const supabaseKey = SUPABASE_SERVICE_ROLE_KEY || SUPABASE_ANON_KEY;
 
 const isKeyValid = (key: string) => key && key.length > 20 && !key.includes('YOUR_');
 
+const finalUrl = SUPABASE_URL && SUPABASE_URL.startsWith('http') ? SUPABASE_URL : 'https://placeholder.supabase.co';
+const finalKey = isKeyValid(supabaseKey) ? supabaseKey : 'placeholder-key';
+
 if (!SUPABASE_URL || !isKeyValid(supabaseKey)) {
   console.error('❌ ERROR: Invalid or missing Supabase credentials in server! Please check your environment variables.');
 }
 
-export const supabase = createClient(SUPABASE_URL, supabaseKey);
+export const supabase = createClient(finalUrl, finalKey);

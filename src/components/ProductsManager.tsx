@@ -54,7 +54,7 @@ export default function ProductsManager({ restaurant, onNavigateImport }: Produc
   const fetchProductsAndCategories = async () => {
     try {
       const token = getAuthToken();
-      const res = await fetch('/api/products', {
+      const res = await fetch('/api/restaurant/products', {
         headers: { Authorization: `Bearer ${token}` }
       });
       const data = await res.json();
@@ -118,7 +118,7 @@ export default function ProductsManager({ restaurant, onNavigateImport }: Produc
 
     try {
       const token = getAuthToken();
-      const url = editingProduct ? `/api/products/${editingProduct.id}` : '/api/products';
+      const url = editingProduct ? `/api/restaurant/products/${editingProduct.id}` : '/api/restaurant/products';
       const method = editingProduct ? 'PUT' : 'POST';
 
       const res = await fetch(url, {
@@ -156,7 +156,7 @@ export default function ProductsManager({ restaurant, onNavigateImport }: Produc
     if (!confirm(t('common.delete') + '?')) return;
     try {
       const token = getAuthToken();
-      const res = await fetch(`/api/products/${id}`, {
+      const res = await fetch(`/api/restaurant/products/${id}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -175,7 +175,7 @@ export default function ProductsManager({ restaurant, onNavigateImport }: Produc
       // Optimistic update
       setProducts(prev => prev.map(p => p.id === prod.id ? { ...p, isAvailable: newAvail } : p));
 
-      await fetch(`/api/products/${prod.id}`, {
+      await fetch(`/api/restaurant/products/${prod.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -199,7 +199,7 @@ export default function ProductsManager({ restaurant, onNavigateImport }: Produc
 
     try {
       const token = getAuthToken();
-      const res = await fetch('/api/categories', {
+      const res = await fetch('/api/restaurant/categories', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -227,7 +227,7 @@ export default function ProductsManager({ restaurant, onNavigateImport }: Produc
     if (!confirm(t('dashboard.delete_category_warning'))) return;
     try {
       const token = getAuthToken();
-      const res = await fetch(`/api/categories/${catId}`, {
+      const res = await fetch(`/api/restaurant/categories/${catId}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` }
       });
