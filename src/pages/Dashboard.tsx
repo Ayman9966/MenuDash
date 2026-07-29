@@ -40,7 +40,7 @@ import { useTranslation } from 'react-i18next';
 export default function Dashboard() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { user, logoutUser } = useAuth();
+  const { user, logoutUser, setUser } = useAuth();
   const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'overview' | 'settings' | 'import' | 'products' | 'plans'>('overview');
@@ -60,17 +60,17 @@ export default function Dashboard() {
       const res = await fetch('/api/me', {
         headers: { Authorization: `Bearer ${token}` }
       });
-      const data = await res.json();
-      if (!res.ok) {
+      
+      if (res.status === 401 || res.status === 403) {
         logoutUser();
         navigate('/login');
         return;
       }
+
+      const data = await res.json();
       
-      // Update user in context if it changed (e.g. role update)
       if (data.user) {
-        // We can't directly call setUser here since it's not exposed by useAuth
-        // But we can update localStorage so next refresh is correct
+        setUser(data.user);
         localStorage.setItem('user', JSON.stringify(data.user));
       }
       

@@ -12,6 +12,7 @@ import {
   Search,
   ExternalLink,
   ShieldAlert,
+  ShieldCheck,
   Send,
   Package,
   Layers,
@@ -33,6 +34,7 @@ export default function SuperadminDashboard() {
   const [filter, setFilter] = useState<'all' | 'premium' | 'free' | 'expiring' | 'inactive'>('all');
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
   const [telegramStatus, setTelegramStatus] = useState<any>(null);
+  const [healthStatus, setHealthStatus] = useState<any>(null);
   const [selectedRestaurant, setSelectedRestaurant] = useState<ExtendedRestaurant | null>(null);
   const [confirmationModal, setConfirmationModal] = useState<{
     show: boolean;
@@ -57,13 +59,14 @@ export default function SuperadminDashboard() {
   const fetchData = async () => {
     try {
       const token = getAuthToken();
-      const [resRest, resTel] = await Promise.all([
+      const [resRest, resTel, resHealth] = await Promise.all([
         fetch('/api/admin/restaurants', {
           headers: { Authorization: `Bearer ${token}` }
         }),
         fetch('/api/admin/telegram-status', {
           headers: { Authorization: `Bearer ${token}` }
-        })
+        }),
+        fetch('/api/health')
       ]);
 
       if (resRest.ok) {
@@ -77,6 +80,11 @@ export default function SuperadminDashboard() {
       if (resTel.ok) {
         const data = await resTel.json();
         setTelegramStatus(data);
+      }
+
+      if (resHealth.ok) {
+        const data = await resHealth.json();
+        setHealthStatus(data);
       }
     } catch (err: any) {
       console.error('Error fetching superadmin data:', err);
@@ -204,50 +212,68 @@ export default function SuperadminDashboard() {
           </h1>
           <p className="text-neutral-500 font-medium">{t('superadmin.subtitle')}</p>
         </div>
-        {telegramStatus && (
-          <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4 flex items-center gap-4">
-            <div className="bg-blue-500 text-white p-2.5 rounded-xl shadow-sm">
-              <Send size={20} />
+        <div className="flex flex-col sm:flex-row gap-3">
+          {healthStatus && (
+            <div className={`border rounded-2xl p-4 flex items-center gap-4 ${healthStatus.database.includes('Connected') ? 'bg-green-50 border-green-100' : 'bg-red-50 border-red-100'}`}>
+              <div className={`${healthStatus.database.includes('Connected') ? 'bg-green-500' : 'bg-red-500'} text-white p-2.5 rounded-xl shadow-sm`}>
+                <ShieldCheck size={20} />
+              </div>
+              <div>
+                <p className="text-xs font-bold text-neutral-900 uppercase tracking-wider">System Health</p>
+                <p className={`text-sm font-bold ${healthStatus.database.includes('Connected') ? 'text-green-600' : 'text-red-600'}`}>
+                  {healthStatus.database.includes('Connected') ? 'Database Online' : 'Database Error'}
+                </p>
+                <p className="text-[10px] text-neutral-400 font-bold">
+                  {healthStatus.vercel ? 'Vercel Deployment' : 'Local/AI Studio'}
+                </p>
+              </div>
             </div>
-            <div>
-              <p className="text-xs font-bold text-blue-900 uppercase tracking-wider">Telegram Admin Bot</p>
-              <p className="text-sm font-bold text-blue-600">@{telegramStatus.botUsername}</p>
-              <p className="text-[10px] text-blue-400 font-bold">{telegramStatus.adminChatCount} Admins Connected</p>
-              {process.env.NODE_ENV === 'production' && (
-                <button 
-                  onClick={async () => {
-                    const url = window.prompt('Enter your Vercel deployment URL (e.g. https://my-app.vercel.app):');
-                    if (url) {
-                      const webhookUrl = `${url.replace(/\/$/, '')}/api/telegram-webhook`;
-                      try {
-                        const res = await fetch('/api/admin/setup-telegram-webhook', {
-                          method: 'POST',
-                          headers: { 
-                            'Content-Type': 'application/json',
-                            Authorization: `Bearer ${getAuthToken()}`
-                          },
-                          body: JSON.stringify({ url: webhookUrl })
-                        });
-                        const data = await res.json();
-                        if (data.ok) {
-                          alert('Webhook set successfully!');
-                          fetchData();
-                        } else {
-                          alert('Failed to set webhook: ' + (data.description || 'Unknown error'));
+          )}
+          {telegramStatus && (
+            <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4 flex items-center gap-4">
+              <div className="bg-blue-500 text-white p-2.5 rounded-xl shadow-sm">
+                <Send size={20} />
+              </div>
+              <div>
+                <p className="text-xs font-bold text-blue-900 uppercase tracking-wider">Telegram Admin Bot</p>
+                <p className="text-sm font-bold text-blue-600">@{telegramStatus.botUsername}</p>
+                <p className="text-[10px] text-blue-400 font-bold">{telegramStatus.adminChatCount} Admins Connected</p>
+                {process.env.NODE_ENV === 'production' && (
+                  <button 
+                    onClick={async () => {
+                      const url = window.prompt('Enter your Vercel deployment URL (e.g. https://my-app.vercel.app):');
+                      if (url) {
+                        const webhookUrl = `${url.replace(/\/$/, '')}/api/telegram-webhook`;
+                        try {
+                          const res = await fetch('/api/admin/setup-telegram-webhook', {
+                            method: 'POST',
+                            headers: { 
+                              'Content-Type': 'application/json',
+                              Authorization: `Bearer ${getAuthToken()}`
+                            },
+                            body: JSON.stringify({ url: webhookUrl })
+                          });
+                          const data = await res.json();
+                          if (data.ok) {
+                            alert('Webhook set successfully!');
+                            fetchData();
+                          } else {
+                            alert('Failed to set webhook: ' + (data.description || 'Unknown error'));
+                          }
+                        } catch (err) {
+                          alert('Error: ' + err);
                         }
-                      } catch (err) {
-                        alert('Error: ' + err);
                       }
-                    }
-                  }}
-                  className="mt-1 text-[10px] text-blue-700 underline hover:no-underline font-bold"
-                >
-                  Setup Webhook for Vercel
-                </button>
-              )}
+                    }}
+                    className="mt-1 text-[10px] text-blue-700 underline hover:no-underline font-bold"
+                  >
+                    Setup Webhook for Vercel
+                  </button>
+                )}
+              </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </header>
 
       <AnimatePresence>
