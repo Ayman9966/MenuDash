@@ -67,6 +67,13 @@ export default function Dashboard() {
         return;
       }
       
+      // Update user in context if it changed (e.g. role update)
+      if (data.user) {
+        // We can't directly call setUser here since it's not exposed by useAuth
+        // But we can update localStorage so next refresh is correct
+        localStorage.setItem('user', JSON.stringify(data.user));
+      }
+      
       if (data.restaurant) {
         setRestaurant({
           ...data.restaurant,

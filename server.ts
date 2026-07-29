@@ -9,7 +9,10 @@ import {
   startTelegramPolling,
   sendNewUserAlert,
   updateRestaurantPlan,
-  getAdminChatCount
+  getAdminChatCount,
+  setTelegramWebhook,
+  getTelegramWebhookInfo,
+  handleTelegramCommand
 } from "./server/telegramBot";
 
 dotenv.config();
@@ -145,6 +148,8 @@ export { app };
 // Start Telegram Bot Long Polling - Only if not on Vercel
 if (!process.env.VERCEL && !process.env.VERCEL_ENV) {
   startTelegramPolling(supabase);
+} else {
+  console.log('🚀 Running on Vercel: Telegram Bot Polling Disabled (Use Webhooks)');
 }
 
 app.use(express.json({ limit: '10mb' }));
@@ -180,12 +185,38 @@ app.use(express.json({ limit: '10mb' }));
   });
 
   // SuperAdmin: Telegram Bot Status & Info
-  app.get("/api/admin/telegram-status", superadminOnly, (req, res) => {
+  app.get("/api/admin/telegram-status", superadminOnly, async (req, res) => {
+    const webhookInfo = await getTelegramWebhookInfo();
     res.json({
       botUsername: 'menuquickadmin_bot',
       adminChatCount: getAdminChatCount(),
+      webhook: webhookInfo,
       instructions: 'Send /start or <restaurant_id>-YYYY-MM-DD to @menuquickadmin_bot in Telegram'
     });
+  });
+
+  // SuperAdmin: Setup Telegram Webhook
+  app.post("/api/admin/setup-telegram-webhook", superadminOnly, async (req: any, res) => {
+    const { url } = req.body;
+    if (!url) return res.status(400).json({ error: 'URL is required' });
+    const result = await setTelegramWebhook(url);
+    res.json(result);
+  });
+
+  // Telegram Webhook Endpoint
+  app.post("/api/telegram-webhook", async (req, res) => {
+    try {
+      const update = req.body;
+      if (update.message && update.message.text) {
+        const chatId = update.message.chat.id;
+        const text = update.message.text.trim();
+        await handleTelegramCommand(supabase, chatId, text);
+      }
+      res.json({ ok: true });
+    } catch (err) {
+      console.error('Webhook error:', err);
+      res.status(500).json({ ok: false });
+    }
   });
 
   // SuperAdmin: Activate/Update Plan directly via API
@@ -285,7 +316,7 @@ app.use(express.json({ limit: '10mb' }));
       const { user: updatedUser, restaurant } = await ensureUserRestaurant(user);
 
       // 🔔 Send Telegram Alert to SuperAdmin for new registration!
-      sendNewUserAlert({
+      sendNewUserAlert(supabase, {
         username: updatedUser.username,
         phone: updatedUser.phone,
         userId: updatedUser.id,
@@ -295,7 +326,7 @@ app.use(express.json({ limit: '10mb' }));
         createdAt: user.created_at || new Date().toISOString()
       }).catch(err => console.error('Telegram alert trigger error:', err));
       
-      const token = jwt.sign({ uid: updatedUser.id, username: updatedUser.username }, JWT_SECRET, { expiresIn: '7d' });
+      const token = jwt.sign({ uid: updatedUser.id, username: updatedUser.username, role: updatedUser.role }, JWT_SECRET, { expiresIn: '7d' });
       res.json({ user: updatedUser, restaurant, token });
     } catch (error: any) {
       console.error('Register error:', error);
@@ -346,7 +377,7 @@ app.use(express.json({ limit: '10mb' }));
       // Ensure user has a restaurant created and linked
       const { user: updatedUser, restaurant } = await ensureUserRestaurant(user);
       
-      const token = jwt.sign({ uid: updatedUser.id, username: updatedUser.username }, JWT_SECRET, { expiresIn: '7d' });
+      const token = jwt.sign({ uid: updatedUser.id, username: updatedUser.username, role: updatedUser.role }, JWT_SECRET, { expiresIn: '7d' });
       res.json({ user: updatedUser, restaurant, token });
     } catch (error) {
       console.error('Login error:', error);

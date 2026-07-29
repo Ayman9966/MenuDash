@@ -69,13 +69,18 @@ export default function SuperadminDashboard() {
       if (resRest.ok) {
         const data = await resRest.json();
         setRestaurants(data);
+      } else {
+        const errorData = await resRest.json().catch(() => ({}));
+        setMessage({ type: 'error', text: `Failed to fetch restaurants: ${errorData.error || resRest.statusText}` });
       }
+
       if (resTel.ok) {
         const data = await resTel.json();
         setTelegramStatus(data);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error fetching superadmin data:', err);
+      setMessage({ type: 'error', text: `Connection error: ${err.message}` });
     } finally {
       setLoading(false);
     }
@@ -208,6 +213,38 @@ export default function SuperadminDashboard() {
               <p className="text-xs font-bold text-blue-900 uppercase tracking-wider">Telegram Admin Bot</p>
               <p className="text-sm font-bold text-blue-600">@{telegramStatus.botUsername}</p>
               <p className="text-[10px] text-blue-400 font-bold">{telegramStatus.adminChatCount} Admins Connected</p>
+              {process.env.NODE_ENV === 'production' && (
+                <button 
+                  onClick={async () => {
+                    const url = window.prompt('Enter your Vercel deployment URL (e.g. https://my-app.vercel.app):');
+                    if (url) {
+                      const webhookUrl = `${url.replace(/\/$/, '')}/api/telegram-webhook`;
+                      try {
+                        const res = await fetch('/api/admin/setup-telegram-webhook', {
+                          method: 'POST',
+                          headers: { 
+                            'Content-Type': 'application/json',
+                            Authorization: `Bearer ${getAuthToken()}`
+                          },
+                          body: JSON.stringify({ url: webhookUrl })
+                        });
+                        const data = await res.json();
+                        if (data.ok) {
+                          alert('Webhook set successfully!');
+                          fetchData();
+                        } else {
+                          alert('Failed to set webhook: ' + (data.description || 'Unknown error'));
+                        }
+                      } catch (err) {
+                        alert('Error: ' + err);
+                      }
+                    }
+                  }}
+                  className="mt-1 text-[10px] text-blue-700 underline hover:no-underline font-bold"
+                >
+                  Setup Webhook for Vercel
+                </button>
+              )}
             </div>
           </div>
         )}

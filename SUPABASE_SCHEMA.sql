@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS users (
   username TEXT UNIQUE NOT NULL,
   password TEXT NOT NULL,
   phone TEXT,
-  role TEXT DEFAULT 'owner' CHECK (role IN ('admin', 'owner', 'customer')),
+  role TEXT DEFAULT 'owner' CHECK (role IN ('superadmin', 'admin', 'owner', 'customer')),
   restaurant_id UUID,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );

@@ -85,10 +85,12 @@ export async function sendTelegramMessage(chatId: number | string, text: string,
 /**
  * Broadcast message to all registered superadmins
  */
-export async function broadcastToAdmins(text: string, parseMode: string = 'HTML') {
+export async function broadcastToAdmins(text: string, parseMode: string = 'HTML', supabase?: SupabaseClient) {
+  if (adminChatIds.size === 0 && supabase) {
+    await loadAdminChatIds(supabase);
+  }
+  
   if (adminChatIds.size === 0) {
-    // Note: In serverless, we might not have a global state, but we can't easily fetch DB here 
-    // without a supabase client. The alerts usually happen during requests where we have the client.
     console.log('No Telegram admin chat IDs recorded yet.');
     return;
   }
@@ -105,7 +107,7 @@ function escapeHtml(str: string): string {
 /**
  * Send alert for new user registration
  */
-export async function sendNewUserAlert(data: {
+export async function sendNewUserAlert(supabase: SupabaseClient, data: {
   username: string;
   phone?: string | null;
   userId: string;
@@ -134,7 +136,7 @@ export async function sendNewUserAlert(data: {
 Send: <code>${data.restaurantId || 'RESTAURANT_ID'}-YYYY-MM-DD</code>
 <i>Example:</i> <code>${data.restaurantId || 'RESTAURANT_ID'}-2027-12-31</code>`;
 
-  await broadcastToAdmins(message);
+  await broadcastToAdmins(message, 'HTML', supabase);
 }
 
 /**
@@ -310,7 +312,7 @@ export async function deleteRestaurantPermanently(supabase: SupabaseClient, targ
 /**
  * Handle individual Telegram messages/commands
  */
-async function handleTelegramCommand(supabase: SupabaseClient, chatId: number, text: string) {
+export async function handleTelegramCommand(supabase: SupabaseClient, chatId: number, text: string) {
   // Ensure admin list is loaded
   await loadAdminChatIds(supabase);
   
@@ -522,4 +524,32 @@ Send <code>/help</code> for instructions.`);
 
 export function getAdminChatCount() {
   return adminChatIds.size;
+}
+
+/**
+ * Set Webhook for Telegram
+ */
+export async function setTelegramWebhook(webhookUrl: string) {
+  try {
+    const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook`;
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url: webhookUrl })
+    });
+    return await res.json();
+  } catch (err) {
+    console.error('setTelegramWebhook error:', err);
+    return { ok: false, error: err };
+  }
+}
+
+export async function getTelegramWebhookInfo() {
+  try {
+    const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getWebhookInfo`;
+    const res = await fetch(url);
+    return await res.json();
+  } catch (err) {
+    return { ok: false, error: err };
+  }
 }
