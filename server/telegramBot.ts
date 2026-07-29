@@ -1,5 +1,3 @@
-import fs from 'fs';
-import path from 'path';
 import { SupabaseClient } from '@supabase/supabase-js';
 
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
@@ -7,45 +5,58 @@ const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 if (!TELEGRAM_BOT_TOKEN) {
   console.warn('Telegram Bot Token is missing. Bot features will not work.');
 }
-const DATA_DIR = path.join(process.cwd(), 'data');
-const ADMINS_FILE = path.join(DATA_DIR, 'telegram_admins.json');
 
-// Ensure data directory exists
-if (!fs.existsSync(DATA_DIR)) {
-  try {
-    fs.mkdirSync(DATA_DIR, { recursive: true });
-  } catch (err) {
-    console.error('Failed to create data dir:', err);
-  }
-}
-
-// In-memory set of admin chat IDs
+// In-memory cache of admin chat IDs to reduce DB hits
 let adminChatIds = new Set<number>();
+let lastAdminFetch = 0;
+const ADMIN_FETCH_TTL = 60000; // 1 minute
 
-// Load saved admin chat IDs
-function loadAdminChatIds() {
+/**
+ * Load admin chat IDs from Supabase
+ */
+async function loadAdminChatIds(supabase: SupabaseClient) {
   try {
-    if (fs.existsSync(ADMINS_FILE)) {
-      const data = fs.readFileSync(ADMINS_FILE, 'utf-8');
-      const list = JSON.parse(data);
-      if (Array.isArray(list)) {
-        list.forEach((id: number) => adminChatIds.add(id));
-      }
+    const now = Date.now();
+    if (now - lastAdminFetch < ADMIN_FETCH_TTL && adminChatIds.size > 0) {
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from('telegram_admins')
+      .select('chat_id');
+
+    if (error) throw error;
+
+    if (Array.isArray(data)) {
+      const newSet = new Set<number>();
+      data.forEach((row: any) => newSet.add(Number(row.chat_id)));
+      adminChatIds = newSet;
+      lastAdminFetch = now;
     }
   } catch (err) {
-    console.error('Failed to load telegram admin chat IDs:', err);
+    console.error('Failed to load telegram admin chat IDs from Supabase:', err);
   }
 }
 
-function saveAdminChatIds() {
+/**
+ * Save a new admin chat ID to Supabase
+ */
+async function saveAdminChatId(supabase: SupabaseClient, chatId: number, username?: string) {
   try {
-    fs.writeFileSync(ADMINS_FILE, JSON.stringify(Array.from(adminChatIds)), 'utf-8');
+    const { error } = await supabase
+      .from('telegram_admins')
+      .upsert([{ 
+        chat_id: chatId, 
+        username: username || null 
+      }], { onConflict: 'chat_id' });
+
+    if (error) throw error;
+    
+    adminChatIds.add(chatId);
   } catch (err) {
-    console.error('Failed to save telegram admin chat IDs:', err);
+    console.error('Failed to save telegram admin chat ID to Supabase:', err);
   }
 }
-
-loadAdminChatIds();
 
 /**
  * Send a message via Telegram Bot API
@@ -76,7 +87,9 @@ export async function sendTelegramMessage(chatId: number | string, text: string,
  */
 export async function broadcastToAdmins(text: string, parseMode: string = 'HTML') {
   if (adminChatIds.size === 0) {
-    console.log('No Telegram admin chat IDs recorded yet. Waiting for superadmin to message @menuquickadmin_bot.');
+    // Note: In serverless, we might not have a global state, but we can't easily fetch DB here 
+    // without a supabase client. The alerts usually happen during requests where we have the client.
+    console.log('No Telegram admin chat IDs recorded yet.');
     return;
   }
   for (const chatId of adminChatIds) {
@@ -204,6 +217,10 @@ let updateOffset = 0;
 export function startTelegramPolling(supabase: SupabaseClient) {
   if (isPolling) return;
   isPolling = true;
+
+  // Initialize from DB on startup
+  loadAdminChatIds(supabase);
+
   console.log('🤖 Telegram Superadmin Bot Polling Started (@menuquickadmin_bot)...');
 
   const poll = async () => {
@@ -222,8 +239,7 @@ export function startTelegramPolling(supabase: SupabaseClient) {
 
             // Record admin chat ID
             if (!adminChatIds.has(chatId)) {
-              adminChatIds.add(chatId);
-              saveAdminChatIds();
+              await saveAdminChatId(supabase, chatId, update.message.from?.username);
               console.log(`📌 Recorded new Telegram Superadmin chat_id: ${chatId}`);
             }
 
@@ -295,10 +311,19 @@ export async function deleteRestaurantPermanently(supabase: SupabaseClient, targ
  * Handle individual Telegram messages/commands
  */
 async function handleTelegramCommand(supabase: SupabaseClient, chatId: number, text: string) {
+  // Ensure admin list is loaded
+  await loadAdminChatIds(supabase);
+  
   const lowerText = text.toLowerCase();
 
   // 1. /start or /help
   if (lowerText === '/start' || lowerText === '/help') {
+    if (lowerText === '/start') {
+      // Get message from state if possible, but for polling we have it in loop.
+      // We'll just save it here.
+      await saveAdminChatId(supabase, chatId);
+    }
+
     const helpMsg = `👋 <b>Welcome Superadmin!</b>
 
 I am your QuickMenu assistant. I'll alert you of new signups and help you manage plans.

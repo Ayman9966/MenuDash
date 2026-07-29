@@ -62,6 +62,12 @@ CREATE TABLE IF NOT EXISTS products (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS telegram_admins (
+  chat_id BIGINT PRIMARY KEY,
+  username TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
 -- 2. Add missing columns to existing tables safely
 DO $$ 
 BEGIN 
