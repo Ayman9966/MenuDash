@@ -288,10 +288,10 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8">
+    <div className="max-w-7xl mx-auto px-4 py-8 pb-24 lg:pb-8">
       <div className="flex flex-col lg:flex-row gap-8">
-        {/* Sidebar */}
-        <aside className="w-full lg:w-64 flex flex-col gap-2">
+        {/* Sidebar - Desktop Only */}
+        <aside className="hidden lg:flex w-64 flex-col gap-2 shrink-0">
           {restaurant && (
             <div className="mb-4 px-2">
               <div className="flex items-center gap-3">
@@ -357,6 +357,40 @@ export default function Dashboard() {
             label={t('dashboard.plans')} 
           />
         </aside>
+
+        {/* Mobile Navigation Bar - Fixed at bottom */}
+        <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-neutral-100 px-2 py-2 z-50 flex justify-around items-center shadow-[0_-10px_30px_-15px_rgba(0,0,0,0.1)]">
+          <MobileNavItem 
+            active={activeTab === 'overview'} 
+            onClick={() => setActiveTab('overview')} 
+            icon={<Layout size={20} />} 
+            label={t('dashboard.overview')} 
+          />
+          <MobileNavItem 
+            active={activeTab === 'products'} 
+            onClick={() => setActiveTab('products')} 
+            icon={<UtensilsCrossed size={20} />} 
+            label={t('dashboard.products')} 
+          />
+          <MobileNavItem 
+            active={activeTab === 'settings'} 
+            onClick={() => setActiveTab('settings')} 
+            icon={<Settings size={20} />} 
+            label={t('dashboard.settings')} 
+          />
+          <MobileNavItem 
+            active={activeTab === 'import'} 
+            onClick={() => setActiveTab('import')} 
+            icon={<FileUp size={20} />} 
+            label={t('dashboard.import')} 
+          />
+          <MobileNavItem 
+            active={activeTab === 'plans'} 
+            onClick={() => setActiveTab('plans')} 
+            icon={<CreditCard size={20} />} 
+            label={t('dashboard.plans')} 
+          />
+        </div>
 
         {/* Main Content */}
         <main className={`flex-1 space-y-6 transition-all duration-500 rounded-[2.5rem] ${
@@ -783,6 +817,24 @@ function SidebarItem({ active, onClick, icon, label }: { active: boolean, onClic
     >
       {icon}
       {label}
+    </button>
+  );
+}
+
+function MobileNavItem({ active, onClick, icon, label }: { active: boolean, onClick: () => void, icon: React.ReactNode, label: string }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`flex flex-col items-center gap-1 flex-1 py-1 rounded-xl transition-all ${
+        active 
+          ? 'text-orange-500' 
+          : 'text-neutral-400'
+      }`}
+    >
+      <div className={`p-1.5 rounded-lg transition-all ${active ? 'bg-orange-50' : ''}`}>
+        {icon}
+      </div>
+      <span className="text-[10px] font-bold uppercase tracking-tighter">{label.split(' ')[0]}</span>
     </button>
   );
 }
