@@ -124,7 +124,9 @@ export default function PublicMenu({ isDemo = false }: { isDemo?: boolean }) {
     
     let message = `*${t('menu.your_order')} from ${restaurant.name}*\n\n`;
     cart.forEach((item) => {
-      message += `• ${item.quantity}x ${item.name} - ${restaurant.currency} ${(parseFloat(item.price) * item.quantity).toFixed(2)}\n`;
+      const translated = translateProduct(item, i18n.language);
+      const displayName = translated.name || item.name;
+      message += `• ${item.quantity}x ${displayName} - ${restaurant.currency} ${(parseFloat(item.price) * item.quantity).toFixed(2)}\n`;
     });
     message += `\n*${t('menu.total')}: ${restaurant.currency} ${total.toFixed(2)}*`;
     
@@ -137,15 +139,25 @@ export default function PublicMenu({ isDemo = false }: { isDemo?: boolean }) {
     return isNaN(val) ? '0.00' : val.toFixed(2);
   };
 
-  // Filter products by search term
+  // Filter products by search term and current language
   const searchFilteredProducts = products.filter((p: any) => {
+    const lang = i18n.language;
+    const translated = translateProduct(p, lang);
+    
+    // Strict language check: if there's no name for this language, hide it
+    if (!translated.name) return false;
+
     if (!search.trim()) return true;
     const q = search.toLowerCase();
-    const translated = translateProduct(p, i18n.language);
     
-    // Strictly search only within the current language fields to avoid mixed language results
     return translated.name.toLowerCase().includes(q) || 
            (translated.description && translated.description.toLowerCase().includes(q));
+  });
+
+  // Filter categories to only show those that have content for the current language
+  const activeLangCategories = categories.filter(cat => {
+    const name = translateCategoryName(cat, i18n.language);
+    return !!name;
   });
 
   if (loading) return (
@@ -250,7 +262,7 @@ export default function PublicMenu({ isDemo = false }: { isDemo?: boolean }) {
 };
 
   // Group products by category
-  const categoriesWithProducts = categories.map((cat, catIndex) => {
+  const categoriesWithProducts = activeLangCategories.map((cat, catIndex) => {
     const isCategoryLocked = isFreePlan && catIndex >= FREE_CATEGORY_LIMIT;
     const catProds = searchFilteredProducts.filter((p: any) => (p.categoryId || p.category_id) === cat.id);
     
@@ -263,7 +275,7 @@ export default function PublicMenu({ isDemo = false }: { isDemo?: boolean }) {
   }).filter(c => c.items.length > 0);
 
   // Uncategorized products
-  const categoryIdsSet = new Set(categories.map(c => c.id));
+  const categoryIdsSet = new Set(activeLangCategories.map(c => c.id));
   const uncategorizedProducts = searchFilteredProducts.filter((p: any) => {
     const catId = p.categoryId || p.category_id;
     return !catId || !categoryIdsSet.has(catId);
@@ -478,7 +490,7 @@ export default function PublicMenu({ isDemo = false }: { isDemo?: boolean }) {
             >
               {t('menu.all_items')}
             </button>
-            {categories.map((cat, index) => {
+            {activeLangCategories.map((cat, index) => {
               const isCategoryLocked = isFreePlan && index >= FREE_CATEGORY_LIMIT;
               return (
                 <button
@@ -567,9 +579,9 @@ export default function PublicMenu({ isDemo = false }: { isDemo?: boolean }) {
           /* SINGLE CATEGORY VIEW */
           <div className="space-y-4">
             {(() => {
-              const catIndex = categories.findIndex(c => c.id === selectedCategory);
+              const catIndex = activeLangCategories.findIndex(c => c.id === selectedCategory);
               const isCategoryLocked = isFreePlan && catIndex >= FREE_CATEGORY_LIMIT;
-              const currentCat = categories.find(c => c.id === selectedCategory);
+              const currentCat = activeLangCategories.find(c => c.id === selectedCategory);
               const catProds = searchFilteredProducts.filter((p: any) => (p.categoryId || p.category_id) === selectedCategory);
 
               return (
@@ -676,30 +688,35 @@ export default function PublicMenu({ isDemo = false }: { isDemo?: boolean }) {
               </div>
 
               <div className="flex-1 overflow-y-auto p-6 space-y-4">
-                {cart.map((item) => (
-                  <div key={item.id} className="flex items-center gap-4 bg-neutral-50 p-3 rounded-2xl border border-neutral-100">
-                    {item.imageUrl ? (
-                      <img src={item.imageUrl} className="w-16 h-16 rounded-xl object-cover shrink-0" />
-                    ) : (
-                      <div className="w-16 h-16 rounded-xl bg-orange-100 text-orange-500 font-bold flex items-center justify-center shrink-0">
-                        {item.name.charAt(0)}
+                {cart.map((item) => {
+                  const translated = translateProduct(item, i18n.language);
+                  const displayName = translated.name || item.name;
+                  
+                  return (
+                    <div key={item.id} className="flex items-center gap-4 bg-neutral-50 p-3 rounded-2xl border border-neutral-100">
+                      {item.imageUrl ? (
+                        <img src={item.imageUrl} className="w-16 h-16 rounded-xl object-cover shrink-0" alt={displayName} />
+                      ) : (
+                        <div className="w-16 h-16 rounded-xl bg-orange-100 text-orange-500 font-bold flex items-center justify-center shrink-0">
+                          {displayName.charAt(0)}
+                        </div>
+                      )}
+                      <div className="flex-1">
+                        <h4 className="font-bold text-sm text-neutral-900">{displayName}</h4>
+                        <p className="text-xs font-semibold text-orange-600 mt-0.5">{restaurant.currency} {parseFloat(item.price).toFixed(2)}</p>
                       </div>
-                    )}
-                    <div className="flex-1">
-                      <h4 className="font-bold text-sm text-neutral-900">{item.name}</h4>
-                      <p className="text-xs font-semibold text-orange-600 mt-0.5">{restaurant.currency} {parseFloat(item.price).toFixed(2)}</p>
+                      <div className="flex items-center gap-2 bg-white p-1.5 rounded-xl border border-neutral-200">
+                        <button onClick={() => removeFromCart(item.id)} className="p-1 hover:bg-neutral-100 rounded-lg transition-colors text-neutral-700">
+                          <Minus size={14} />
+                        </button>
+                        <span className="font-bold text-sm w-5 text-center">{item.quantity}</span>
+                        <button onClick={() => addToCart(item)} className="p-1 hover:bg-neutral-100 rounded-lg transition-colors text-neutral-700">
+                          <Plus size={14} />
+                        </button>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2 bg-white p-1.5 rounded-xl border border-neutral-200">
-                      <button onClick={() => removeFromCart(item.id)} className="p-1 hover:bg-neutral-100 rounded-lg transition-colors text-neutral-700">
-                        <Minus size={14} />
-                      </button>
-                      <span className="font-bold text-sm w-5 text-center">{item.quantity}</span>
-                      <button onClick={() => addToCart(item)} className="p-1 hover:bg-neutral-100 rounded-lg transition-colors text-neutral-700">
-                        <Plus size={14} />
-                      </button>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
 
               <div className="p-6 border-t border-neutral-100 space-y-4 bg-white">

@@ -100,16 +100,15 @@ export function translateCategoryName(category: any, lang: string): string {
     }
   }
 
-  // Final fallback to the base name if no translation was found
-  return catName || category.name || '';
+  return catName || '';
 }
 
 export function translateRestaurantDescription(restaurant: any, lang: string): string {
   if (!restaurant) return '';
   if (lang === 'fr') {
-    return restaurant.description_fr || restaurant.description || '';
+    return restaurant.description_fr || '';
   } else if (lang === 'ar') {
-    return restaurant.description_ar || restaurant.description || '';
+    return restaurant.description_ar || '';
   }
   return restaurant.description_en || restaurant.description || '';
 }
@@ -128,8 +127,8 @@ export function translateProduct(product: any, lang: string): { name: string; de
     name = product.name_ar;
     description = product.description_ar;
   } else {
-    name = product.name_en;
-    description = product.description_en;
+    name = product.name_en || product.name;
+    description = product.description_en || product.description;
   }
 
   // If name is still missing, try dictionary lookup for the product ID
@@ -141,9 +140,5 @@ export function translateProduct(product: any, lang: string): { name: string; de
     }
   }
 
-  // Fallback to base fields only if we have nothing else
-  if (!name) name = product.name || '';
-  if (!description) description = product.description || '';
-
-  return { name, description };
+  return { name: name || '', description: description || '' };
 }
