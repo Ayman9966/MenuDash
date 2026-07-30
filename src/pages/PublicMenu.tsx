@@ -21,7 +21,7 @@ export default function PublicMenu({ isDemo = false }: { isDemo?: boolean }) {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [viewTemplate, setViewTemplate] = useState<'list' | 'grid'>('list');
   const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
-  const [langMenuOpen, setLangMenuOpen] = useState(false);
+  const [isLangModalOpen, setIsLangModalOpen] = useState(false);
 
   useEffect(() => {
     const fetchMenu = async () => {
@@ -85,12 +85,12 @@ export default function PublicMenu({ isDemo = false }: { isDemo?: boolean }) {
     if (!enabledLanguages.includes(code) || (enabledLanguages.length === 1 && code !== enabledLanguages[0])) {
       setAlertMessage(t('menu.lang_not_available'));
       setTimeout(() => setAlertMessage(null), 4000);
-      setLangMenuOpen(false);
+      setIsLangModalOpen(false);
       return;
     }
     i18n.changeLanguage(code);
     localStorage.setItem('menu_dash_lang_selected', 'true');
-    setLangMenuOpen(false);
+    setIsLangModalOpen(false);
   };
 
   const [scrolled, setScrolled] = useState(false);
@@ -373,49 +373,13 @@ export default function PublicMenu({ isDemo = false }: { isDemo?: boolean }) {
             {/* Quick Action Badges / Status / Language */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4 self-start sm:self-auto sm:mb-1">
               {availableLanguages.length > 1 && (
-                <div className="relative">
-                  <button
-                    onClick={() => setLangMenuOpen(!langMenuOpen)}
-                    className="flex items-center gap-2 bg-white border border-neutral-200 px-3 py-1.5 rounded-full text-xs font-bold text-neutral-700 hover:border-orange-300 transition-all shadow-xs"
-                  >
-                    <Globe size={14} className="text-orange-500" />
-                    <span>{currentLang.label}</span>
-                  </button>
-                  
-                  <AnimatePresence>
-                    {langMenuOpen && !scrolled && (
-                      <>
-                        <motion.div
-                          initial={{ opacity: 0 }}
-                          animate={{ opacity: 1 }}
-                          exit={{ opacity: 0 }}
-                          onClick={() => setLangMenuOpen(false)}
-                          className="fixed inset-0 z-[100]"
-                        />
-                        <motion.div
-                          initial={{ opacity: 0, scale: 0.9, y: 10 }}
-                          animate={{ opacity: 1, scale: 1, y: 0 }}
-                          exit={{ opacity: 0, scale: 0.9, y: 10 }}
-                          className={`absolute top-full mt-2 ${isRTL ? 'left-0' : 'right-0'} w-40 bg-white rounded-2xl shadow-2xl border border-neutral-100 p-2 overflow-hidden z-[110]`}
-                        >
-                          {availableLanguages.map(lang => (
-                            <button
-                              key={lang.code}
-                              onClick={() => changeLanguage(lang.code)}
-                              className={`w-full flex items-center px-3 py-2 rounded-xl text-sm font-bold transition-colors ${
-                                i18n.language === lang.code 
-                                  ? 'bg-orange-50 text-orange-600' 
-                                  : 'text-neutral-700 hover:bg-neutral-50'
-                              }`}
-                            >
-                              {lang.label}
-                            </button>
-                          ))}
-                        </motion.div>
-                      </>
-                    )}
-                  </AnimatePresence>
-                </div>
+                <button
+                  onClick={() => setIsLangModalOpen(true)}
+                  className="flex items-center gap-2 bg-white border border-neutral-200 px-3 py-1.5 rounded-full text-xs font-bold text-neutral-700 hover:border-orange-300 transition-all shadow-xs active:scale-95"
+                >
+                  <Globe size={14} className="text-orange-500" />
+                  <span>{currentLang.label}</span>
+                </button>
               )}
 
               {hasWhatsApp && (
@@ -504,49 +468,13 @@ export default function PublicMenu({ isDemo = false }: { isDemo?: boolean }) {
 
             {/* Separate Language Selector - Only when scrolled */}
             {scrolled && availableLanguages.length > 1 && (
-              <div className="relative">
-                <button
-                  onClick={() => setLangMenuOpen(!langMenuOpen)}
-                  className="p-2.5 bg-white border border-neutral-200 hover:border-orange-300 rounded-2xl text-neutral-500 hover:text-orange-600 transition-all shadow-xs flex items-center justify-center shrink-0"
-                  title="Change Language"
-                >
-                  <Globe size={18} />
-                </button>
-
-                <AnimatePresence>
-                  {langMenuOpen && scrolled && (
-                    <>
-                      <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        onClick={() => setLangMenuOpen(false)}
-                        className="fixed inset-0 z-[100]"
-                      />
-                      <motion.div
-                        initial={{ opacity: 0, scale: 0.9, y: 10 }}
-                        animate={{ opacity: 1, scale: 1, y: 0 }}
-                        exit={{ opacity: 0, scale: 0.9, y: 10 }}
-                        className={`absolute top-full mt-2 ${isRTL ? 'left-0' : 'right-0'} w-40 bg-white rounded-2xl shadow-2xl border border-neutral-100 p-2 overflow-hidden z-[110]`}
-                      >
-                        {availableLanguages.map(lang => (
-                          <button
-                            key={lang.code}
-                            onClick={() => changeLanguage(lang.code)}
-                            className={`w-full flex items-center px-3 py-2 rounded-xl text-sm font-bold transition-colors ${
-                              i18n.language === lang.code 
-                                ? 'bg-orange-50 text-orange-600' 
-                                : 'text-neutral-700 hover:bg-neutral-50'
-                            }`}
-                          >
-                            {lang.label}
-                          </button>
-                        ))}
-                      </motion.div>
-                    </>
-                  )}
-                </AnimatePresence>
-              </div>
+              <button
+                onClick={() => setIsLangModalOpen(true)}
+                className="p-2.5 bg-white border border-neutral-200 hover:border-orange-300 rounded-2xl text-neutral-500 hover:text-orange-600 transition-all shadow-xs flex items-center justify-center shrink-0 active:scale-95"
+                title="Change Language"
+              >
+                <Globe size={18} />
+              </button>
             )}
 
             <button
@@ -816,6 +744,59 @@ export default function PublicMenu({ isDemo = false }: { isDemo?: boolean }) {
                     </button>
                   </div>
                 )}
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Language Selection Modal (Popup) */}
+      <AnimatePresence>
+        {isLangModalOpen && (
+          <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsLangModalOpen(false)}
+              className="absolute inset-0 bg-neutral-900/60 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="bg-white w-full max-w-sm rounded-[2.5rem] shadow-2xl relative overflow-hidden p-8"
+            >
+              <div className="flex items-center justify-between mb-8">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-orange-50 text-orange-600 flex items-center justify-center">
+                    <Globe size={24} />
+                  </div>
+                  <h3 className="text-xl font-black text-neutral-900">{t('menu.select_language')}</h3>
+                </div>
+                <button 
+                  onClick={() => setIsLangModalOpen(false)}
+                  className="p-2 hover:bg-neutral-100 rounded-full transition-colors text-neutral-400"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              <div className="grid gap-3">
+                {availableLanguages.map((lang) => (
+                  <button
+                    key={lang.code}
+                    onClick={() => changeLanguage(lang.code)}
+                    className={`w-full flex items-center justify-between p-4 rounded-2xl font-bold transition-all ${
+                      i18n.language === lang.code
+                        ? 'bg-orange-50 text-orange-600 border-2 border-orange-200'
+                        : 'bg-neutral-50 text-neutral-700 border-2 border-transparent hover:bg-white hover:border-neutral-200'
+                    }`}
+                  >
+                    <span className="text-base">{lang.label}</span>
+                    {i18n.language === lang.code && <div className="w-2 h-2 rounded-full bg-orange-500" />}
+                  </button>
+                ))}
               </div>
             </motion.div>
           </div>
