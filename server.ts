@@ -9,14 +9,41 @@ dotenv.config();
 const app = express();
 const PORT = Number(process.env.PORT) || 3000;
 
-initTelegram();
+
+// initTelegram removed from here for Vercel compatibility
 
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
+app.get("/api/test", (req, res) => {
+  res.json({ 
+    ok: true, 
+    vercel: !!process.env.VERCEL, 
+    env: process.env.NODE_ENV,
+    hasSupabase: !!process.env.SUPABASE_URL,
+    hasSuperadmin: !!process.env.SUPERADMIN_USERNAME
+  });
+});
+
+app.use((req, res, next) => {
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
+  next();
+});
+
 app.get("/favicon.ico", (req, res) => res.status(204).end());
 
 app.use("/api", apiRouter);
+app.use("/", apiRouter);
+
+// Global Error Handler
+app.use((err: any, req: any, res: any, next: any) => {
+  console.error('SERVER ERROR:', err);
+  res.status(500).json({ 
+    error: 'Internal Server Error', 
+    message: err.message,
+    stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
+  });
+});
 
 // Vite middleware for development or static serving
 if (process.env.NODE_ENV !== "production") {
@@ -40,7 +67,8 @@ if (process.env.NODE_ENV !== "production") {
   });
 }
 
-if (!process.env.VERCEL && process.env.NODE_ENV !== 'production') {
+if (!process.env.VERCEL) {
+  initTelegram();
   app.listen(PORT, "0.0.0.0", () => {
     console.log(`Server running on http://localhost:${PORT}`);
   });

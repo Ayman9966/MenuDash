@@ -141,6 +141,11 @@ apiRouter.post("/auth/register", async (req, res) => {
 });
 
 apiRouter.post("/auth/login", async (req, res) => {
+  console.log('LOGIN REQUEST:', { 
+    hasBody: !!req.body, 
+    bodyKeys: req.body ? Object.keys(req.body) : [],
+    username: req.body?.username 
+  });
   const { username, password } = req.body || {};
   if (!username || !password) {
     return res.status(400).json({ error: 'Username/Email and password are required' });
@@ -170,7 +175,11 @@ apiRouter.post("/auth/login", async (req, res) => {
 
     if (error) {
       console.error('Supabase login query error:', error);
-      return res.status(500).json({ error: 'Database connection error. Please check Supabase credentials in Vercel environment variables.' });
+      return res.status(500).json({ 
+        error: 'Database connection error', 
+        details: error.message,
+        hint: 'Please check Supabase credentials in Vercel environment variables.' 
+      });
     }
 
     if (!user) {
