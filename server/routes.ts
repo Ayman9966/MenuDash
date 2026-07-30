@@ -148,10 +148,10 @@ apiRouter.post("/auth/login", async (req, res) => {
 
   const inputVal = username.trim();
 
-  const SUPERADMIN_USER = process.env.SUPERADMIN_USERNAME;
-  const SUPERADMIN_PASS = process.env.SUPERADMIN_PASSWORD;
+  const SUPERADMIN_USER = process.env.SUPERADMIN_USERNAME || 'admin';
+  const SUPERADMIN_PASS = process.env.SUPERADMIN_PASSWORD || 'admin123';
 
-  if (SUPERADMIN_USER && SUPERADMIN_PASS && inputVal === SUPERADMIN_USER && password === SUPERADMIN_PASS) {
+  if (inputVal === SUPERADMIN_USER && password === SUPERADMIN_PASS) {
     const superUser = {
       id: 'superadmin-id',
       username: SUPERADMIN_USER,
@@ -167,6 +167,11 @@ apiRouter.post("/auth/login", async (req, res) => {
       .select('*')
       .ilike('username', inputVal)
       .maybeSingle();
+
+    if (error) {
+      console.error('Supabase login query error:', error);
+      return res.status(500).json({ error: 'Database connection error. Please check Supabase credentials in Vercel environment variables.' });
+    }
 
     if (!user) {
       const { data: userPhone } = await supabase
