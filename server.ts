@@ -1,10 +1,8 @@
 import express from "express";
 import path from "path";
-import * as dotenv from "dotenv";
+import "dotenv/config";
 import { initTelegram } from "./server/backendCore";
 import { apiRouter } from "./server/routes";
-
-dotenv.config();
 
 const app = express();
 const PORT = Number(process.env.PORT) || 3000;
@@ -59,7 +57,8 @@ if (process.env.NODE_ENV !== "production") {
   }).catch((err) => {
     console.error("Failed to load vite:", err);
   });
-} else {
+} else if (!process.env.VERCEL) {
+  // Static serving only if NOT on Vercel
   const distPath = path.join(process.cwd(), 'dist');
   app.use(express.static(distPath));
   app.get('*', (req, res) => {

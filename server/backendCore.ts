@@ -1,45 +1,26 @@
 import { createClient } from '@supabase/supabase-js';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import * as dotenv from 'dotenv';
 
-dotenv.config();
-
-import { startTelegramPolling, sendNewUserAlert, updateRestaurantPlan, getAdminChatCount } from './telegramBot';
-
-const SUPABASE_URL = process.env.SUPABASE_URL || '';
-const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || '';
+// Supabase initialization with fallback to avoid crashes
+const SUPABASE_URL = process.env.SUPABASE_URL || 'https://placeholder.supabase.co';
+const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || 'placeholder-key';
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || SUPABASE_ANON_KEY;
 const JWT_SECRET = process.env.JWT_SECRET || 'jwt-secret';
 
-let cachedSupabase: any = null;
-function getSupabaseClient() {
-  if (!cachedSupabase) {
-    const url = process.env.SUPABASE_URL || '';
-    const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || '';
-    if (!url || !key) {
-      console.error('CRITICAL: SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY is missing in environment variables!');
-    }
-    cachedSupabase = createClient(url || 'https://placeholder.supabase.co', key || 'placeholder-key');
-  }
-  return cachedSupabase;
+if (!process.env.SUPABASE_URL) {
+  console.warn('WARNING: SUPABASE_URL is not defined in environment variables.');
 }
 
-export const supabase = new Proxy({}, {
-  get(target, prop) {
-    const client = getSupabaseClient();
-    const value = client[prop];
-    if (typeof value === 'function') {
-      return value.bind(client);
-    }
-    return value;
-  }
-}) as any;
+export const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
+import { startTelegramPolling, sendNewUserAlert, updateRestaurantPlan, getAdminChatCount } from './telegramBot';
 
 // منع تشغيل الاستطلاع نهائياً على Vercel
 let pollingStarted = false;
 export function initTelegram() {
   if (process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME || process.env.VERCEL_ENV) {
+    console.log('initTelegram skipped: Running in serverless environment');
     return; 
   }
   if (!pollingStarted && typeof startTelegramPolling === 'function') {
