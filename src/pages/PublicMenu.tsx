@@ -768,11 +768,8 @@ export default function PublicMenu({ isDemo = false }: { isDemo?: boolean }) {
               className="bg-white w-full max-w-sm rounded-[2.5rem] shadow-2xl relative overflow-hidden p-8"
             >
               <div className="flex items-center justify-between mb-8">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-2xl bg-orange-50 text-orange-600 flex items-center justify-center">
-                    <Globe size={24} />
-                  </div>
-                  <h3 className="text-xl font-black text-neutral-900">{t('menu.select_language')}</h3>
+                <div className="w-10 h-10 rounded-2xl bg-orange-50 text-orange-600 flex items-center justify-center">
+                  <Globe size={24} />
                 </div>
                 <button 
                   onClick={() => setIsLangModalOpen(false)}
