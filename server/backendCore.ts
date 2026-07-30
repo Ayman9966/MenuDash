@@ -6,10 +6,10 @@ import { startTelegramPolling, sendNewUserAlert, updateRestaurantPlan, getAdminC
 
 dotenv.config();
 
-const SUPABASE_URL = process.env.SUPABASE_URL || 'https://kubesezuhxgcpoannvuq.supabase.co';
-const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt1YmVzZXp1aHhnY3BvYW5udnVxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUyNjU2NDcsImV4cCI6MjEwMDg0MTY0N30.5atpopWwhJuiOJHHEkXRm3yp-eIFHLisbJX4blsRdeE';
+const SUPABASE_URL = process.env.SUPABASE_URL || '';
+const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || '';
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || SUPABASE_ANON_KEY;
-const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret';
+const JWT_SECRET = process.env.JWT_SECRET || 'jwt-secret';
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 

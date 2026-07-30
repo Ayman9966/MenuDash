@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { SupabaseClient } from '@supabase/supabase-js';
 
-const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '8593338839:AAFChczTntdK75HJgOX0kpQJOLpuD7ZUqNc';
+const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '';
 const isVercel = process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME;
 const DATA_DIR = isVercel ? '/tmp' : path.join(process.cwd(), 'data');
 const ADMINS_FILE = path.join(DATA_DIR, 'telegram_admins.json');
