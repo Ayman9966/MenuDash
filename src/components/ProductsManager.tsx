@@ -40,16 +40,27 @@ export default function ProductsManager({ restaurant, onNavigateImport }: Produc
 
   // Form fields for product
   const [prodName, setProdName] = useState('');
+  const [prodNameEn, setProdNameEn] = useState('');
+  const [prodNameFr, setProdNameFr] = useState('');
+  const [prodNameAr, setProdNameAr] = useState('');
   const [prodCatId, setProdCatId] = useState('');
   const [prodPrice, setProdPrice] = useState('');
   const [prodDesc, setProdDesc] = useState('');
+  const [prodDescEn, setProdDescEn] = useState('');
+  const [prodDescFr, setProdDescFr] = useState('');
+  const [prodDescAr, setProdDescAr] = useState('');
   const [prodImage, setProdImage] = useState('');
   const [prodAvailable, setProdAvailable] = useState(true);
 
   // Form field for category
   const [newCatName, setNewCatName] = useState('');
+  const [newCatNameEn, setNewCatNameEn] = useState('');
+  const [newCatNameFr, setNewCatNameFr] = useState('');
+  const [newCatNameAr, setNewCatNameAr] = useState('');
   const [actionError, setActionError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+
+  const enabledLangs = restaurant?.languages ? restaurant.languages.split(',') : ['en'];
 
   const fetchProductsAndCategories = async () => {
     try {
@@ -79,8 +90,14 @@ export default function ProductsManager({ restaurant, onNavigateImport }: Produc
   const openAddProduct = () => {
     setEditingProduct(null);
     setProdName('');
+    setProdNameEn('');
+    setProdNameFr('');
+    setProdNameAr('');
     setProdPrice('');
     setProdDesc('');
+    setProdDescEn('');
+    setProdDescFr('');
+    setProdDescAr('');
     setProdImage('');
     setProdAvailable(true);
     if (categories.length > 0) {
@@ -93,9 +110,15 @@ export default function ProductsManager({ restaurant, onNavigateImport }: Produc
   const openEditProduct = (prod: Product) => {
     setEditingProduct(prod);
     setProdName(prod.name);
+    setProdNameEn(prod.name_en || '');
+    setProdNameFr(prod.name_fr || '');
+    setProdNameAr(prod.name_ar || '');
     setProdCatId(prod.categoryId);
     setProdPrice(String(prod.price));
     setProdDesc(prod.description || '');
+    setProdDescEn(prod.description_en || '');
+    setProdDescFr(prod.description_fr || '');
+    setProdDescAr(prod.description_ar || '');
     setProdImage(prod.imageUrl || '');
     setProdAvailable(prod.isAvailable ?? true);
     setActionError(null);
@@ -129,9 +152,15 @@ export default function ProductsManager({ restaurant, onNavigateImport }: Produc
         },
         body: JSON.stringify({
           name: prodName.trim(),
+          name_en: prodNameEn.trim() || prodName.trim(),
+          name_fr: prodNameFr.trim(),
+          name_ar: prodNameAr.trim(),
           categoryId: prodCatId,
           price: parseFloat(prodPrice) || 0,
           description: prodDesc.trim(),
+          description_en: prodDescEn.trim() || prodDesc.trim(),
+          description_fr: prodDescFr.trim(),
+          description_ar: prodDescAr.trim(),
           imageUrl: prodImage.trim(),
           isAvailable: prodAvailable,
           isFeatured: false
@@ -205,12 +234,20 @@ export default function ProductsManager({ restaurant, onNavigateImport }: Produc
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`
         },
-        body: JSON.stringify({ name: newCatName.trim() })
+        body: JSON.stringify({ 
+          name: newCatName.trim(),
+          name_en: newCatNameEn.trim() || newCatName.trim(),
+          name_fr: newCatNameFr.trim(),
+          name_ar: newCatNameAr.trim()
+        })
       });
 
       const data = await res.json();
       if (res.ok) {
         setNewCatName('');
+        setNewCatNameEn('');
+        setNewCatNameFr('');
+        setNewCatNameAr('');
         setIsCategoryModalOpen(false);
         fetchProductsAndCategories();
       } else {
@@ -493,7 +530,7 @@ export default function ProductsManager({ restaurant, onNavigateImport }: Produc
 
             <form onSubmit={handleSaveProduct} className="space-y-4">
               <div>
-                <label className="block text-xs font-bold uppercase text-neutral-600 mb-1">{t('dashboard.item_name')} *</label>
+                <label className="block text-xs font-bold uppercase text-neutral-600 mb-1">{t('dashboard.item_name')} (Base) *</label>
                 <input
                   type="text"
                   required
@@ -502,6 +539,47 @@ export default function ProductsManager({ restaurant, onNavigateImport }: Produc
                   onChange={(e) => setProdName(e.target.value)}
                   className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 text-sm focus:border-orange-500 outline-none"
                 />
+              </div>
+
+              {/* Multilingual Name Fields */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {enabledLangs.includes('en') && (
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase text-neutral-400 mb-1">Name (English)</label>
+                    <input
+                      type="text"
+                      placeholder="English Name"
+                      value={prodNameEn}
+                      onChange={(e) => setProdNameEn(e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl border border-neutral-100 text-xs focus:border-orange-300 outline-none"
+                    />
+                  </div>
+                )}
+                {enabledLangs.includes('fr') && (
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase text-neutral-400 mb-1">Nom (Français)</label>
+                    <input
+                      type="text"
+                      placeholder="Nom en Français"
+                      value={prodNameFr}
+                      onChange={(e) => setProdNameFr(e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl border border-neutral-100 text-xs focus:border-orange-300 outline-none"
+                    />
+                  </div>
+                )}
+                {enabledLangs.includes('ar') && (
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase text-neutral-400 mb-1 text-right">الاسم (العربية)</label>
+                    <input
+                      type="text"
+                      dir="rtl"
+                      placeholder="الاسم بالعربية"
+                      value={prodNameAr}
+                      onChange={(e) => setProdNameAr(e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl border border-neutral-100 text-xs focus:border-orange-300 outline-none text-right"
+                    />
+                  </div>
+                )}
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -544,6 +622,47 @@ export default function ProductsManager({ restaurant, onNavigateImport }: Produc
                   onChange={(e) => setProdDesc(e.target.value)}
                   className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 text-sm focus:border-orange-500 outline-none"
                 />
+              </div>
+
+              {/* Multilingual Description Fields */}
+              <div className="space-y-3">
+                {enabledLangs.includes('en') && (
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase text-neutral-400 mb-1">Description (English)</label>
+                    <textarea
+                      rows={1}
+                      placeholder="English description..."
+                      value={prodDescEn}
+                      onChange={(e) => setProdDescEn(e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl border border-neutral-100 text-xs focus:border-orange-300 outline-none"
+                    />
+                  </div>
+                )}
+                {enabledLangs.includes('fr') && (
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase text-neutral-400 mb-1">Description (Français)</label>
+                    <textarea
+                      rows={1}
+                      placeholder="Description en français..."
+                      value={prodDescFr}
+                      onChange={(e) => setProdDescFr(e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl border border-neutral-100 text-xs focus:border-orange-300 outline-none"
+                    />
+                  </div>
+                )}
+                {enabledLangs.includes('ar') && (
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase text-neutral-400 mb-1 text-right">الوصف (العربية)</label>
+                    <textarea
+                      rows={1}
+                      dir="rtl"
+                      placeholder="الوصف بالعربية..."
+                      value={prodDescAr}
+                      onChange={(e) => setProdDescAr(e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl border border-neutral-100 text-xs focus:border-orange-300 outline-none text-right"
+                    />
+                  </div>
+                )}
               </div>
 
               <div>
@@ -606,21 +725,64 @@ export default function ProductsManager({ restaurant, onNavigateImport }: Produc
               </button>
             </div>
 
-            <form onSubmit={handleCreateCategory} className="flex gap-2">
-              <input
-                type="text"
-                placeholder={t('dashboard.new_category_placeholder')}
-                value={newCatName}
-                onChange={(e) => setNewCatName(e.target.value)}
-                className="flex-1 px-4 py-2 rounded-xl border border-neutral-200 text-sm focus:border-orange-500 outline-none"
-              />
-              <button
-                type="submit"
-                disabled={saving || !newCatName.trim()}
-                className="bg-neutral-900 text-white px-4 py-2 rounded-xl font-bold text-sm hover:bg-neutral-800 transition-colors disabled:opacity-50"
-              >
-                {t('common.add')}
-              </button>
+            <form onSubmit={handleCreateCategory} className="space-y-3">
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  placeholder={t('dashboard.new_category_placeholder')}
+                  value={newCatName}
+                  onChange={(e) => setNewCatName(e.target.value)}
+                  className="flex-1 px-4 py-2 rounded-xl border border-neutral-200 text-sm focus:border-orange-500 outline-none"
+                />
+                <button
+                  type="submit"
+                  disabled={saving || !newCatName.trim()}
+                  className="bg-neutral-900 text-white px-4 py-2 rounded-xl font-bold text-sm hover:bg-neutral-800 transition-colors disabled:opacity-50"
+                >
+                  {t('common.add')}
+                </button>
+              </div>
+
+              {/* Multilingual Category Names */}
+              <div className="grid grid-cols-1 gap-2 pt-2 border-t border-neutral-50">
+                {enabledLangs.includes('en') && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-bold text-neutral-400 w-12 shrink-0">EN</span>
+                    <input
+                      type="text"
+                      placeholder="Category in English"
+                      value={newCatNameEn}
+                      onChange={(e) => setNewCatNameEn(e.target.value)}
+                      className="flex-1 px-3 py-1.5 rounded-lg border border-neutral-100 text-xs outline-none focus:border-orange-200"
+                    />
+                  </div>
+                )}
+                {enabledLangs.includes('fr') && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-bold text-neutral-400 w-12 shrink-0">FR</span>
+                    <input
+                      type="text"
+                      placeholder="Catégorie en Français"
+                      value={newCatNameFr}
+                      onChange={(e) => setNewCatNameFr(e.target.value)}
+                      className="flex-1 px-3 py-1.5 rounded-lg border border-neutral-100 text-xs outline-none focus:border-orange-200"
+                    />
+                  </div>
+                )}
+                {enabledLangs.includes('ar') && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-bold text-neutral-400 w-12 shrink-0">AR</span>
+                    <input
+                      type="text"
+                      dir="rtl"
+                      placeholder="الفئة بالعربية"
+                      value={newCatNameAr}
+                      onChange={(e) => setNewCatNameAr(e.target.value)}
+                      className="flex-1 px-3 py-1.5 rounded-lg border border-neutral-100 text-xs outline-none focus:border-orange-200 text-right"
+                    />
+                  </div>
+                )}
+              </div>
             </form>
 
             <div className="space-y-2 max-h-60 overflow-y-auto">

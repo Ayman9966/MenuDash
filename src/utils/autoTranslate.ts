@@ -81,20 +81,26 @@ export function translateCategoryName(category: any, lang: string): string {
     const langMap = categoryTranslations[lang] || categoryTranslations['en'];
     return langMap[category] || category;
   }
+  
   let catName = '';
+  // Prioritize the requested language field
   if (lang === 'fr') {
-    catName = category.name_fr || category.name_en || category.name;
+    catName = category.name_fr;
   } else if (lang === 'ar') {
-    catName = category.name_ar || category.name_en || category.name;
+    catName = category.name_ar;
   } else {
     catName = category.name_en || category.name;
   }
 
+  // If the specific field is missing, try the dictionary lookup on the base name
   if (!catName && category.name) {
-    const langMap = categoryTranslations[lang] || categoryTranslations['en'];
-    return langMap[category.name] || category.name;
+    const langMap = categoryTranslations[lang];
+    if (langMap) {
+      catName = langMap[category.name];
+    }
   }
 
+  // Final fallback to the base name if no translation was found
   return catName || category.name || '';
 }
 
@@ -105,32 +111,39 @@ export function translateRestaurantDescription(restaurant: any, lang: string): s
   } else if (lang === 'ar') {
     return restaurant.description_ar || restaurant.description || '';
   }
-  return restaurant.description || '';
+  return restaurant.description_en || restaurant.description || '';
 }
 
 export function translateProduct(product: any, lang: string): { name: string; description: string } {
   if (!product) return { name: '', description: '' };
   
-  let name = product.name;
-  let description = product.description || '';
+  let name = '';
+  let description = '';
 
+  // Prioritize specific language fields
   if (lang === 'fr') {
-    name = product.name_fr || product.name_en || product.name;
-    description = product.description_fr || product.description_en || product.description || '';
+    name = product.name_fr;
+    description = product.description_fr;
   } else if (lang === 'ar') {
-    name = product.name_ar || product.name_en || product.name;
-    description = product.description_ar || product.description_en || product.description || '';
+    name = product.name_ar;
+    description = product.description_ar;
   } else {
-    name = product.name_en || product.name;
-    description = product.description_en || product.description || '';
+    name = product.name_en;
+    description = product.description_en;
   }
 
+  // If name is still missing, try dictionary lookup for the product ID
   if (!name && product.id) {
     const prodMap = productTranslations[lang];
     if (prodMap && prodMap[product.id]) {
-      return prodMap[product.id];
+      name = prodMap[product.id].name;
+      description = prodMap[product.id].description;
     }
   }
 
-  return { name: name || product.name || '', description };
+  // Fallback to base fields only if we have nothing else
+  if (!name) name = product.name || '';
+  if (!description) description = product.description || '';
+
+  return { name, description };
 }

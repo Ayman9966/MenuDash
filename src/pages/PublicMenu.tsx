@@ -83,7 +83,7 @@ export default function PublicMenu({ isDemo = false }: { isDemo?: boolean }) {
 
   const changeLanguage = (code: string) => {
     if (!enabledLanguages.includes(code) || (enabledLanguages.length === 1 && code !== enabledLanguages[0])) {
-      setAlertMessage("You must upload the menu in English, France, or Arabic first!");
+      setAlertMessage(t('menu.lang_not_available'));
       setTimeout(() => setAlertMessage(null), 4000);
       setLangMenuOpen(false);
       return;
@@ -142,9 +142,9 @@ export default function PublicMenu({ isDemo = false }: { isDemo?: boolean }) {
     if (!search.trim()) return true;
     const q = search.toLowerCase();
     const translated = translateProduct(p, i18n.language);
-    return p.name.toLowerCase().includes(q) || 
-           (p.description && p.description.toLowerCase().includes(q)) ||
-           translated.name.toLowerCase().includes(q) ||
+    
+    // Strictly search only within the current language fields to avoid mixed language results
+    return translated.name.toLowerCase().includes(q) || 
            (translated.description && translated.description.toLowerCase().includes(q));
   });
 

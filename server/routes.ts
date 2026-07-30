@@ -421,7 +421,16 @@ apiRouter.post("/products", async (req, res) => {
   const user = await authenticate(req, res);
   if (!user) return;
 
-  const { categoryId, name, description, nameEn, nameFr, nameAr, descriptionEn, descriptionFr, descriptionAr, price, imageUrl, isAvailable, isFeatured } = req.body;
+  const { 
+    categoryId, name, description, 
+    nameEn, name_en, 
+    nameFr, name_fr, 
+    nameAr, name_ar, 
+    descriptionEn, description_en, 
+    descriptionFr, description_fr, 
+    descriptionAr, description_ar, 
+    price, imageUrl, isAvailable, isFeatured 
+  } = req.body;
   try {
     const { data: restaurant } = await supabase
       .from('restaurants')
@@ -431,19 +440,26 @@ apiRouter.post("/products", async (req, res) => {
 
     if (!restaurant) return res.status(400).json({ error: 'Restaurant not found' });
 
+    const finalNameEn = nameEn || name_en || name || '';
+    const finalNameFr = nameFr || name_fr || '';
+    const finalNameAr = nameAr || name_ar || '';
+    const finalDescEn = descriptionEn || description_en || description || '';
+    const finalDescFr = descriptionFr || description_fr || '';
+    const finalDescAr = descriptionAr || description_ar || '';
+
     const { data: product, error } = await supabase
       .from('products')
       .insert([{
         restaurant_id: restaurant.id,
         category_id: categoryId,
-        name: name || nameEn || nameFr || nameAr || '',
-        description: description || descriptionEn || descriptionFr || descriptionAr || '',
-        name_en: nameEn || name || '',
-        name_fr: nameFr || '',
-        name_ar: nameAr || '',
-        description_en: descriptionEn || description || '',
-        description_fr: descriptionFr || '',
-        description_ar: descriptionAr || '',
+        name: name || finalNameEn || finalNameFr || finalNameAr || '',
+        description: description || finalDescEn || finalDescFr || finalDescAr || '',
+        name_en: finalNameEn,
+        name_fr: finalNameFr,
+        name_ar: finalNameAr,
+        description_en: finalDescEn,
+        description_fr: finalDescFr,
+        description_ar: finalDescAr,
         price: parseFloat(price) || 0,
         image_url: imageUrl || '',
         is_available: isAvailable !== false,
@@ -481,7 +497,16 @@ apiRouter.put("/products/:id", async (req, res) => {
   const id = req.params.id;
   if (!id) return res.status(400).json({ error: 'Missing product id' });
 
-  const { categoryId, name, description, nameEn, nameFr, nameAr, descriptionEn, descriptionFr, descriptionAr, price, imageUrl, isAvailable, isFeatured } = req.body;
+  const { 
+    categoryId, name, description, 
+    nameEn, name_en, 
+    nameFr, name_fr, 
+    nameAr, name_ar, 
+    descriptionEn, description_en, 
+    descriptionFr, description_fr, 
+    descriptionAr, description_ar, 
+    price, imageUrl, isAvailable, isFeatured 
+  } = req.body;
   try {
     const { data: restaurant } = await supabase
       .from('restaurants')
@@ -491,18 +516,25 @@ apiRouter.put("/products/:id", async (req, res) => {
 
     if (!restaurant) return res.status(400).json({ error: 'Restaurant not found' });
 
+    const finalNameEn = nameEn || name_en || name || '';
+    const finalNameFr = nameFr || name_fr || '';
+    const finalNameAr = nameAr || name_ar || '';
+    const finalDescEn = descriptionEn || description_en || description || '';
+    const finalDescFr = descriptionFr || description_fr || '';
+    const finalDescAr = descriptionAr || description_ar || '';
+
     const { data: product, error } = await supabase
       .from('products')
       .update({
         category_id: categoryId,
-        name: name || nameEn || nameFr || nameAr || '',
-        description: description || descriptionEn || descriptionFr || descriptionAr || '',
-        name_en: nameEn || name || '',
-        name_fr: nameFr || '',
-        name_ar: nameAr || '',
-        description_en: descriptionEn || description || '',
-        description_fr: descriptionFr || '',
-        description_ar: descriptionAr || '',
+        name: name || finalNameEn || finalNameFr || finalNameAr || '',
+        description: description || finalDescEn || finalDescFr || finalDescAr || '',
+        name_en: finalNameEn,
+        name_fr: finalNameFr,
+        name_ar: finalNameAr,
+        description_en: finalDescEn,
+        description_fr: finalDescFr,
+        description_ar: finalDescAr,
         price: parseFloat(price) || 0,
         image_url: imageUrl,
         is_available: isAvailable,
@@ -570,7 +602,7 @@ apiRouter.post("/categories", async (req, res) => {
   const user = await authenticate(req, res);
   if (!user) return;
 
-  const { name } = req.body;
+  const { name, nameEn, name_en, nameFr, name_fr, nameAr, name_ar } = req.body;
   if (!name || !name.trim()) return res.status(400).json({ error: 'Category name is required' });
 
   try {
@@ -587,6 +619,9 @@ apiRouter.post("/categories", async (req, res) => {
       .insert([{
         restaurant_id: restaurant.id,
         name: name.trim(),
+        name_en: nameEn || name_en || name.trim(),
+        name_fr: nameFr || name_fr || '',
+        name_ar: nameAr || name_ar || '',
         order: 0
       }])
       .select()
