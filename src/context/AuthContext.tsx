@@ -5,7 +5,6 @@ import { User } from '../types';
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  setUser: (user: User | null) => void;
   login: (user: User, token: string) => void;
   logoutUser: () => void;
 }
@@ -19,19 +18,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const initializeAuth = () => {
       try {
-        const token = localStorage.getItem('token');
-        const savedUser = localStorage.getItem('user');
+        const token = getAuthToken();
+        const storedUser = getAuthUser();
         
-        if (token && savedUser && savedUser !== 'undefined') {
-          try {
-            setUser(JSON.parse(savedUser));
-          } catch (e) {
-            console.error('Failed to parse saved user:', e);
-            localStorage.removeItem('user');
-          }
+        if (token && storedUser) {
+          setUser(storedUser);
         }
       } catch (err) {
         console.error('Failed to initialize auth:', err);
+        logout();
       } finally {
         setLoading(false);
       }
@@ -48,12 +43,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logoutUser = () => {
     setUser(null);
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+    logout();
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, setUser, login, logoutUser }}>
+    <AuthContext.Provider value={{ user, loading, login, logoutUser }}>
       {children}
     </AuthContext.Provider>
   );

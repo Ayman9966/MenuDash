@@ -5,7 +5,7 @@ export const users = pgTable('users', {
   username: text('username').unique().notNull(),
   password: text('password').notNull(),
   phone: text('phone'),
-  role: text('role', { enum: ['superadmin', 'admin', 'owner', 'customer'] }).default('owner').notNull(),
+  role: text('role', { enum: ['admin', 'owner', 'customer'] }).default('owner').notNull(),
   restaurantId: uuid('restaurant_id'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });

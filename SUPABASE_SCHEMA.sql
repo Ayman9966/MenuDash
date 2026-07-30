@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS users (
   username TEXT UNIQUE NOT NULL,
   password TEXT NOT NULL,
   phone TEXT,
-  role TEXT DEFAULT 'owner' CHECK (role IN ('superadmin', 'admin', 'owner', 'customer')),
+  role TEXT DEFAULT 'owner' CHECK (role IN ('admin', 'owner', 'customer')),
   restaurant_id UUID,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
@@ -36,9 +36,6 @@ CREATE TABLE IF NOT EXISTS categories (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   restaurant_id UUID REFERENCES restaurants(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
-  name_en TEXT,
-  name_fr TEXT,
-  name_ar TEXT,
   "order" INTEGER DEFAULT 0 NOT NULL,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
@@ -49,22 +46,10 @@ CREATE TABLE IF NOT EXISTS products (
   category_id UUID REFERENCES categories(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
   description TEXT,
-  name_en TEXT,
-  name_fr TEXT,
-  name_ar TEXT,
-  description_en TEXT,
-  description_fr TEXT,
-  description_ar TEXT,
   price NUMERIC(10, 2) NOT NULL,
   image_url TEXT,
   is_available BOOLEAN DEFAULT true NOT NULL,
   is_featured BOOLEAN DEFAULT false NOT NULL,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
-);
-
-CREATE TABLE IF NOT EXISTS telegram_admins (
-  chat_id BIGINT PRIMARY KEY,
-  username TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
@@ -79,37 +64,6 @@ BEGIN
   END IF;
   IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='restaurants' AND column_name='default_language') THEN
     ALTER TABLE restaurants ADD COLUMN default_language TEXT DEFAULT 'en' NOT NULL;
-  END IF;
-
-  -- Categories multi-lang
-  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='categories' AND column_name='name_en') THEN
-    ALTER TABLE categories ADD COLUMN name_en TEXT;
-  END IF;
-  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='categories' AND column_name='name_fr') THEN
-    ALTER TABLE categories ADD COLUMN name_fr TEXT;
-  END IF;
-  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='categories' AND column_name='name_ar') THEN
-    ALTER TABLE categories ADD COLUMN name_ar TEXT;
-  END IF;
-
-  -- Products multi-lang
-  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='products' AND column_name='name_en') THEN
-    ALTER TABLE products ADD COLUMN name_en TEXT;
-  END IF;
-  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='products' AND column_name='name_fr') THEN
-    ALTER TABLE products ADD COLUMN name_fr TEXT;
-  END IF;
-  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='products' AND column_name='name_ar') THEN
-    ALTER TABLE products ADD COLUMN name_ar TEXT;
-  END IF;
-  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='products' AND column_name='description_en') THEN
-    ALTER TABLE products ADD COLUMN description_en TEXT;
-  END IF;
-  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='products' AND column_name='description_fr') THEN
-    ALTER TABLE products ADD COLUMN description_fr TEXT;
-  END IF;
-  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='products' AND column_name='description_ar') THEN
-    ALTER TABLE products ADD COLUMN description_ar TEXT;
   END IF;
 END $$;
 
