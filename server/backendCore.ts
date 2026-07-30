@@ -3,16 +3,24 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 
 // Supabase initialization with fallback to avoid crashes
-const SUPABASE_URL = process.env.SUPABASE_URL || 'https://placeholder.supabase.co';
-const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || 'placeholder-key';
-const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || SUPABASE_ANON_KEY;
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
 const JWT_SECRET = process.env.JWT_SECRET || 'jwt-secret';
 
-if (!process.env.SUPABASE_URL) {
-  console.warn('WARNING: SUPABASE_URL is not defined in environment variables.');
+if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+  console.warn('CRITICAL WARNING: SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY is not defined in environment variables.');
 }
 
-export const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+export const supabase = createClient(
+  SUPABASE_URL || 'https://placeholder.supabase.co', 
+  SUPABASE_SERVICE_ROLE_KEY || 'placeholder-key',
+  {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+    }
+  }
+);
 
 import { startTelegramPolling, sendNewUserAlert, updateRestaurantPlan, getAdminChatCount } from './telegramBot';
 

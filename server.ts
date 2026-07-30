@@ -31,7 +31,6 @@ app.use((req, res, next) => {
 app.get("/favicon.ico", (req, res) => res.status(204).end());
 
 app.use("/api", apiRouter);
-app.use("/", apiRouter);
 
 // Global Error Handler
 app.use((err: any, req: any, res: any, next: any) => {
