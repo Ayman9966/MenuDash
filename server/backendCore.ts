@@ -13,9 +13,12 @@ const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret';
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-// Start Telegram bot polling if not already started
+// Start Telegram bot polling if not already started (disabled in serverless Vercel environments)
 let pollingStarted = false;
 export function initTelegram() {
+  if (process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME) {
+    return; // Serverless functions should not run long polling loops
+  }
   if (!pollingStarted) {
     pollingStarted = true;
     startTelegramPolling(supabase);
