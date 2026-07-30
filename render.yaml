@@ -4,7 +4,7 @@ services:
     env: node
     plan: starter # 'free' is also available but may sleep after inactivity
     region: frankfurt # or your preferred region
-    buildCommand: npm run build
+    buildCommand: npm install && npm run build
     startCommand: npm start
     envVars:
       - key: NODE_ENV

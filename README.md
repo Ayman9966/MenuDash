@@ -80,8 +80,14 @@ Render is recommended because it supports long-running Node.js processes, allowi
 **Setup Steps:**
 1. Connect your GitHub repository to [Render](https://render.com).
 2. Create a new **Web Service**.
-3. Render will automatically detect the `render.yaml` or you can set:
-   - **Build Command**: `npm run build` (Render handles `npm install` automatically)
+3. **Settings on Render Dashboard**:
+   - **Root Directory**: (Leave empty)
+   - **Build Command**: `npm install && npm run build`
    - **Start Command**: `npm start`
 4. Add your **Environment Variables** in the Render Dashboard (under the 'Env' tab).
-5. **Note**: If you see "bun" errors, ensure the **Build Command** in the Render dashboard does NOT have "bun" prepended manually. It should just be `npm run build`.
+5. **Note**: If you see a `vite: not found` error, ensure your Build Command includes `npm install`.
+
+**Troubleshooting Build Errors:**
+- **"installnpm" error**: This usually happens if you accidentally typed something extra in the Render Dashboard. Ensure the Build Command is exactly `npm install && npm run build`.
+- **"vite: not found"**: Ensure `npm install` is running before `npm run build`.
+- **Node Version**: If you need a specific version, add an environment variable `NODE_VERSION` (e.g., `20`).
