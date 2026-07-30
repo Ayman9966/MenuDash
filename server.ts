@@ -169,6 +169,8 @@ async function startServer() {
   };
 
   // API Routes
+  app.get("/favicon.ico", (req, res) => res.status(204).end());
+
   app.get("/api/health", (req, res) => {
     res.json({ status: "ok", supabaseConnected: !!SUPABASE_URL, telegramAdmins: getAdminChatCount() });
   });

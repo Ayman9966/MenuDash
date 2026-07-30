@@ -64,6 +64,7 @@ export default function Login() {
               <input
                 type="text"
                 required
+                autoComplete="username"
                 className="w-full pl-12 pr-4 py-3 rounded-xl border border-neutral-200 focus:border-orange-500 focus:ring-4 focus:ring-orange-100 outline-none transition-all"
                 placeholder={t('auth.username_placeholder')}
                 value={username}
@@ -79,6 +80,7 @@ export default function Login() {
                 <input
                 type="password"
                 required
+                autoComplete="current-password"
                 className="w-full pl-12 pr-4 py-3 rounded-xl border border-neutral-200 focus:border-orange-500 focus:ring-4 focus:ring-orange-100 outline-none transition-all"
                 placeholder={t('auth.password_placeholder')}
                 value={password}

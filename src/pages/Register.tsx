@@ -78,6 +78,7 @@ export default function Register() {
                 <input
                   type="text"
                   required
+                  autoComplete="username"
                   className="w-full pl-12 pr-4 py-3 rounded-xl border border-neutral-200 focus:border-orange-500 focus:ring-4 focus:ring-orange-100 outline-none transition-all"
                   placeholder={t('auth.username_placeholder')}
                   value={username}
@@ -93,6 +94,7 @@ export default function Register() {
                 <input
                    type="tel"
                   required
+                  autoComplete="tel"
                   className="w-full pl-12 pr-4 py-3 rounded-xl border border-neutral-200 focus:border-orange-500 focus:ring-4 focus:ring-orange-100 outline-none transition-all"
                   placeholder="+1234567890"
                   value={phone}
@@ -108,6 +110,7 @@ export default function Register() {
                 <input
                   type="password"
                   required
+                  autoComplete="new-password"
                   minLength={6}
                   className="w-full pl-12 pr-4 py-3 rounded-xl border border-neutral-200 focus:border-orange-500 focus:ring-4 focus:ring-orange-100 outline-none transition-all"
                   placeholder={t('auth.password_hint')}
