@@ -93,6 +93,16 @@ export default function PublicMenu({ isDemo = false }: { isDemo?: boolean }) {
     setLangMenuOpen(false);
   };
 
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 150);
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
   const [expandedProductId, setExpandedProductId] = useState<string | null>(null);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
@@ -324,55 +334,6 @@ export default function PublicMenu({ isDemo = false }: { isDemo?: boolean }) {
         </div>
       )}
       
-      {/* Language Floating Selector */}
-      {availableLanguages.length > 1 && (
-        <div className={`fixed top-4 ${isRTL ? 'left-4' : 'right-4'} z-[110]`}>
-          <div className="relative">
-            <button
-              onClick={() => setLangMenuOpen(!langMenuOpen)}
-              className="bg-white/90 backdrop-blur-md border border-neutral-200 rounded-2xl p-2.5 shadow-lg flex items-center justify-center hover:border-orange-300 transition-all active:scale-95"
-              title="Select Language"
-            >
-              <Globe size={18} className="text-neutral-600" />
-            </button>
-
-            <AnimatePresence>
-              {langMenuOpen && (
-                <>
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    onClick={() => setLangMenuOpen(false)}
-                    className="fixed inset-0 z-[-1]"
-                  />
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.9, y: -10 }}
-                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.9, y: -10 }}
-                    className={`absolute top-full mt-2 ${isRTL ? 'left-0' : 'right-0'} w-40 bg-white rounded-2xl shadow-2xl border border-neutral-100 p-2 overflow-hidden`}
-                  >
-                    {availableLanguages.map(lang => (
-                      <button
-                        key={lang.code}
-                        onClick={() => changeLanguage(lang.code)}
-                        className={`w-full flex items-center px-3 py-2.5 rounded-xl text-sm font-bold transition-colors ${
-                          i18n.language === lang.code 
-                            ? 'bg-orange-50 text-orange-600' 
-                            : 'text-neutral-700 hover:bg-neutral-50'
-                        }`}
-                      >
-                        {lang.label}
-                      </button>
-                    ))}
-                  </motion.div>
-                </>
-              )}
-            </AnimatePresence>
-          </div>
-        </div>
-      )}
-
       {/* Restaurant Hero Banner & Brand Card */}
       <div className="bg-white border-b border-neutral-200/80 shadow-xs mb-2">
         {/* Banner Cover Image */}
@@ -409,15 +370,63 @@ export default function PublicMenu({ isDemo = false }: { isDemo?: boolean }) {
               </div>
             </div>
 
-            {/* Quick Action Badges / Status */}
-            {hasWhatsApp && (
-              <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto sm:mb-1">
-                <span className="inline-flex items-center gap-1.5 bg-neutral-900 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-xs">
-                  <Phone size={12} className="text-emerald-400" />
-                  {t('menu.whatsapp_direct')}
-                </span>
-              </div>
-            )}
+            {/* Quick Action Badges / Status / Language */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4 self-start sm:self-auto sm:mb-1">
+              {availableLanguages.length > 1 && (
+                <div className="relative">
+                  <button
+                    onClick={() => setLangMenuOpen(!langMenuOpen)}
+                    className="flex items-center gap-2 bg-white border border-neutral-200 px-3 py-1.5 rounded-full text-xs font-bold text-neutral-700 hover:border-orange-300 transition-all shadow-xs"
+                  >
+                    <Globe size={14} className="text-orange-500" />
+                    <span>{currentLang.label}</span>
+                  </button>
+                  
+                  <AnimatePresence>
+                    {langMenuOpen && !scrolled && (
+                      <>
+                        <motion.div
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          exit={{ opacity: 0 }}
+                          onClick={() => setLangMenuOpen(false)}
+                          className="fixed inset-0 z-[100]"
+                        />
+                        <motion.div
+                          initial={{ opacity: 0, scale: 0.9, y: 10 }}
+                          animate={{ opacity: 1, scale: 1, y: 0 }}
+                          exit={{ opacity: 0, scale: 0.9, y: 10 }}
+                          className={`absolute top-full mt-2 ${isRTL ? 'left-0' : 'right-0'} w-40 bg-white rounded-2xl shadow-2xl border border-neutral-100 p-2 overflow-hidden z-[110]`}
+                        >
+                          {availableLanguages.map(lang => (
+                            <button
+                              key={lang.code}
+                              onClick={() => changeLanguage(lang.code)}
+                              className={`w-full flex items-center px-3 py-2 rounded-xl text-sm font-bold transition-colors ${
+                                i18n.language === lang.code 
+                                  ? 'bg-orange-50 text-orange-600' 
+                                  : 'text-neutral-700 hover:bg-neutral-50'
+                              }`}
+                            >
+                              {lang.label}
+                            </button>
+                          ))}
+                        </motion.div>
+                      </>
+                    )}
+                  </AnimatePresence>
+                </div>
+              )}
+
+              {hasWhatsApp && (
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="inline-flex items-center gap-1.5 bg-neutral-900 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-xs">
+                    <Phone size={12} className="text-emerald-400" />
+                    {t('menu.whatsapp_direct')}
+                  </span>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Restaurant Title & Info */}
@@ -492,6 +501,54 @@ export default function PublicMenu({ isDemo = false }: { isDemo?: boolean }) {
                 onChange={(e) => setSearch(e.target.value)}
               />
             </div>
+
+            {/* Separate Language Selector - Only when scrolled */}
+            {scrolled && availableLanguages.length > 1 && (
+              <div className="relative">
+                <button
+                  onClick={() => setLangMenuOpen(!langMenuOpen)}
+                  className="p-2.5 bg-white border border-neutral-200 hover:border-orange-300 rounded-2xl text-neutral-500 hover:text-orange-600 transition-all shadow-xs flex items-center justify-center shrink-0"
+                  title="Change Language"
+                >
+                  <Globe size={18} />
+                </button>
+
+                <AnimatePresence>
+                  {langMenuOpen && scrolled && (
+                    <>
+                      <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        onClick={() => setLangMenuOpen(false)}
+                        className="fixed inset-0 z-[100]"
+                      />
+                      <motion.div
+                        initial={{ opacity: 0, scale: 0.9, y: 10 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.9, y: 10 }}
+                        className={`absolute top-full mt-2 ${isRTL ? 'left-0' : 'right-0'} w-40 bg-white rounded-2xl shadow-2xl border border-neutral-100 p-2 overflow-hidden z-[110]`}
+                      >
+                        {availableLanguages.map(lang => (
+                          <button
+                            key={lang.code}
+                            onClick={() => changeLanguage(lang.code)}
+                            className={`w-full flex items-center px-3 py-2 rounded-xl text-sm font-bold transition-colors ${
+                              i18n.language === lang.code 
+                                ? 'bg-orange-50 text-orange-600' 
+                                : 'text-neutral-700 hover:bg-neutral-50'
+                            }`}
+                          >
+                            {lang.label}
+                          </button>
+                        ))}
+                      </motion.div>
+                    </>
+                  )}
+                </AnimatePresence>
+              </div>
+            )}
+
             <button
               type="button"
               onClick={() => setViewTemplate(prev => prev === 'list' ? 'grid' : 'list')}

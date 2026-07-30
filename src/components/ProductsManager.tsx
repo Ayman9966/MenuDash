@@ -60,7 +60,7 @@ export default function ProductsManager({ restaurant, onNavigateImport }: Produc
   const [actionError, setActionError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const enabledLangs = restaurant?.languages ? restaurant.languages.split(',') : ['en'];
+  const enabledLangs = restaurant?.languages ? restaurant.languages.split(',').map(l => l.trim()) : ['en'];
 
   const fetchProductsAndCategories = async () => {
     try {
