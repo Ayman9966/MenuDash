@@ -162,13 +162,24 @@ apiRouter.post("/auth/login", async (req, res) => {
   }
 
   try {
-    const { data: user, error } = await supabase
+    let { data: user, error } = await supabase
       .from('users')
       .select('*')
-      .or(`username.ilike.${inputVal},phone.ilike.${inputVal}`)
+      .ilike('username', inputVal)
       .maybeSingle();
 
-    if (error || !user) {
+    if (!user) {
+      const { data: userPhone } = await supabase
+        .from('users')
+        .select('*')
+        .ilike('phone', inputVal)
+        .maybeSingle();
+      if (userPhone) {
+        user = userPhone;
+      }
+    }
+
+    if (!user) {
       return res.status(401).json({ error: 'Invalid username/phone or password' });
     }
 
@@ -686,12 +697,17 @@ apiRouter.post("/import-csv", async (req, res) => {
 
       if (!nameMain || isNaN(price)) continue;
 
-      let { data: cat } = await supabase
+      const { data: existingCategories } = await supabase
         .from('categories')
         .select('*')
-        .eq('restaurant_id', restaurantId)
-        .or(`name.eq."${categoryMain}",name_en.eq."${categoryMain}",name_fr.eq."${categoryMain}",name_ar.eq."${categoryMain}"`)
-        .maybeSingle();
+        .eq('restaurant_id', restaurantId);
+
+      let cat = existingCategories?.find((c: any) => 
+        c.name?.toLowerCase() === categoryMain.toLowerCase() ||
+        c.name_en?.toLowerCase() === categoryMain.toLowerCase() ||
+        c.name_fr?.toLowerCase() === categoryMain.toLowerCase() ||
+        c.name_ar?.toLowerCase() === categoryMain.toLowerCase()
+      );
       
       if (!cat) {
         categoryOrder += 1;
