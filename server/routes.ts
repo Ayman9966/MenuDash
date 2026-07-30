@@ -87,7 +87,7 @@ apiRouter.delete("/admin/restaurants/:id", async (req, res) => {
 });
 
 apiRouter.post("/auth/register", async (req, res) => {
-  const { username, password, phone } = req.body;
+  const { username, password, phone } = req.body || {};
   if (!username || !password) {
     return res.status(400).json({ error: 'Username and password are required' });
   }
@@ -141,7 +141,7 @@ apiRouter.post("/auth/register", async (req, res) => {
 });
 
 apiRouter.post("/auth/login", async (req, res) => {
-  const { username, password } = req.body;
+  const { username, password } = req.body || {};
   if (!username || !password) {
     return res.status(400).json({ error: 'Username/Email and password are required' });
   }

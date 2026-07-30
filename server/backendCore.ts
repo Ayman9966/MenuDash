@@ -39,7 +39,7 @@ export const supabase = new Proxy({}, {
 // منع تشغيل الاستطلاع نهائياً على Vercel
 let pollingStarted = false;
 export function initTelegram() {
-  if (process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME) {
+  if (process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME || process.env.VERCEL_ENV) {
     return; 
   }
   if (!pollingStarted && typeof startTelegramPolling === 'function') {
