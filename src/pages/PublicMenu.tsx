@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Restaurant, Category, Product, CartItem } from '../types';
-import { ShoppingCart, Plus, Minus, Send, Search, Info, X, LayoutGrid, List, UtensilsCrossed, MapPin, Store, Phone, Lock, Sparkles, ChevronRight, Eye, MessageSquareOff, Globe, AlertCircle } from 'lucide-react';
+import { ShoppingCart, ShoppingBag, Plus, Minus, Send, Search, Info, X, LayoutGrid, List, UtensilsCrossed, MapPin, Store, Phone, Lock, Sparkles, ChevronRight, Eye, MessageSquareOff, Globe, AlertCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { mockRestaurant, mockCategories, mockProducts } from '../data/mockMenu';
 import { useTranslation } from 'react-i18next';
@@ -92,6 +92,9 @@ export default function PublicMenu({ isDemo = false }: { isDemo?: boolean }) {
     localStorage.setItem('menu_dash_lang_selected', 'true');
     setLangMenuOpen(false);
   };
+
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [isProductModalOpen, setIsProductModalOpen] = useState(false);
 
   const isRTL = i18n.language === 'ar';
 
@@ -185,16 +188,26 @@ export default function PublicMenu({ isDemo = false }: { isDemo?: boolean }) {
   // Helper to render individual product card
   const renderProductCard = (product: Product, isLocked: boolean = false) => {
     const { name, description } = translateProduct(product, i18n.language);
+    
+    const handleCardClick = () => {
+      if (isLocked) {
+        setIsUpgradeModalOpen(true);
+      } else {
+        setSelectedProduct(product);
+        setIsProductModalOpen(true);
+      }
+    };
+
     return (
       <div
         key={product.id}
-        onClick={isLocked ? () => setIsUpgradeModalOpen(true) : undefined}
-        className={`bg-white rounded-3xl border shadow-xs transition-all overflow-hidden relative flex ${
+        onClick={handleCardClick}
+        className={`bg-white rounded-3xl border shadow-xs transition-all overflow-hidden relative flex cursor-pointer ${
           viewTemplate === 'grid' ? 'flex-col' : 'flex-row items-center p-4 gap-4'
         } ${
           isLocked 
-            ? 'border-amber-300/80 bg-neutral-50/90 cursor-pointer hover:border-amber-500 hover:shadow-md' 
-            : 'border-neutral-200/80 hover:shadow-md'
+            ? 'border-amber-300/80 bg-neutral-50/90 hover:border-amber-500 hover:shadow-md' 
+            : 'border-neutral-200/80 hover:shadow-md hover:border-orange-200'
         }`}
       >
         {/* Product Card Content - Blurred when locked */}
@@ -232,7 +245,10 @@ export default function PublicMenu({ isDemo = false }: { isDemo?: boolean }) {
               </span>
               {hasWhatsApp && (
                 <button
-                  onClick={() => addToCart({ ...product, name, description })}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    addToCart({ ...product, name, description });
+                  }}
                   className="bg-neutral-900 text-white p-2.5 rounded-xl hover:bg-neutral-800 transition-colors shadow-sm active:scale-95"
                   title={t('menu.add_to_order')}
                 >
@@ -659,6 +675,83 @@ export default function PublicMenu({ isDemo = false }: { isDemo?: boolean }) {
           </motion.button>
         </div>
       )}
+
+      {/* Product Detail Modal */}
+      <AnimatePresence>
+        {isProductModalOpen && selectedProduct && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsProductModalOpen(false)}
+              className="absolute inset-0 bg-neutral-900/60 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="bg-white w-full max-w-lg rounded-[2.5rem] shadow-2xl relative overflow-hidden flex flex-col max-h-[90vh]"
+            >
+              {/* Product Image in Modal */}
+              <div className="h-64 sm:h-80 relative shrink-0">
+                {selectedProduct.imageUrl ? (
+                  <img 
+                    src={selectedProduct.imageUrl} 
+                    className="w-full h-full object-cover" 
+                    alt={translateProduct(selectedProduct, i18n.language).name}
+                    referrerPolicy="no-referrer"
+                  />
+                ) : (
+                  <div className="w-full h-full bg-orange-50 flex items-center justify-center text-orange-500 font-black text-6xl">
+                    {translateProduct(selectedProduct, i18n.language).name.charAt(0)}
+                  </div>
+                )}
+                <button 
+                  onClick={() => setIsProductModalOpen(false)}
+                  className="absolute top-4 right-4 w-10 h-10 bg-white/90 backdrop-blur-md rounded-full flex items-center justify-center text-neutral-900 shadow-lg hover:bg-white transition-colors"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              {/* Product Info in Modal */}
+              <div className="p-8 flex flex-col flex-1 overflow-y-auto">
+                <div className="flex justify-between items-start gap-4 mb-4">
+                  <h2 className="text-2xl font-black text-neutral-900 leading-tight">
+                    {translateProduct(selectedProduct, i18n.language).name}
+                  </h2>
+                  <span className="text-2xl font-black text-orange-600 shrink-0">
+                    {restaurant.currency} {getProductPrice(selectedProduct)}
+                  </span>
+                </div>
+
+                <div className="flex-1">
+                  <p className="text-neutral-600 text-sm leading-relaxed whitespace-pre-wrap">
+                    {translateProduct(selectedProduct, i18n.language).description || t('menu.no_description')}
+                  </p>
+                </div>
+
+                {hasWhatsApp && (
+                  <div className="mt-8 pt-6 border-t border-neutral-100">
+                    <button
+                      onClick={() => {
+                        const { name, description } = translateProduct(selectedProduct, i18n.language);
+                        addToCart({ ...selectedProduct, name, description });
+                        setIsProductModalOpen(false);
+                      }}
+                      className="w-full bg-neutral-900 text-white py-4 rounded-2xl font-black text-base shadow-xl hover:bg-neutral-800 transition-all flex items-center justify-center gap-3 active:scale-95"
+                    >
+                      <ShoppingBag size={20} />
+                      {t('menu.add_to_order')}
+                    </button>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* Cart Sidebar/Modal */}
       <AnimatePresence>

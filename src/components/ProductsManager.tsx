@@ -319,13 +319,35 @@ export default function ProductsManager({ restaurant, onNavigateImport }: Produc
 
       {/* Stats row */}
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-        <div className="bg-white p-5 rounded-2xl border border-neutral-200 shadow-sm flex items-center gap-4">
-          <div className="p-3 bg-orange-50 text-orange-600 rounded-xl">
-            <Package size={22} />
+        <div className="bg-white p-5 rounded-2xl border border-neutral-200 shadow-sm flex flex-col gap-3">
+          <div className="flex items-center gap-4">
+            <div className="p-3 bg-orange-50 text-orange-600 rounded-xl">
+              <Package size={22} />
+            </div>
+            <div>
+              <p className="text-2xl font-extrabold text-neutral-900">{products.length}</p>
+              <p className="text-xs font-medium text-neutral-500">{t('dashboard.total_products')}</p>
+            </div>
           </div>
-          <div>
-            <p className="text-2xl font-extrabold text-neutral-900">{products.length}</p>
-            <p className="text-xs font-medium text-neutral-500">{t('dashboard.total_products')}</p>
+          <div className="flex gap-2 pt-2 border-t border-neutral-50 overflow-x-auto no-scrollbar">
+            {enabledLangs.includes('en') && (
+              <div className="flex items-center gap-1.5 px-2 py-1 bg-blue-50 text-blue-700 rounded-lg shrink-0">
+                <span className="text-[10px] font-black">EN</span>
+                <span className="text-xs font-bold">{products.filter(p => !!p.name_en || !!p.name).length}</span>
+              </div>
+            )}
+            {enabledLangs.includes('ar') && (
+              <div className="flex items-center gap-1.5 px-2 py-1 bg-emerald-50 text-emerald-700 rounded-lg shrink-0">
+                <span className="text-[10px] font-black">AR</span>
+                <span className="text-xs font-bold">{products.filter(p => !!p.name_ar).length}</span>
+              </div>
+            )}
+            {enabledLangs.includes('fr') && (
+              <div className="flex items-center gap-1.5 px-2 py-1 bg-purple-50 text-purple-700 rounded-lg shrink-0">
+                <span className="text-[10px] font-black">FR</span>
+                <span className="text-xs font-bold">{products.filter(p => !!p.name_fr).length}</span>
+              </div>
+            )}
           </div>
         </div>
 
