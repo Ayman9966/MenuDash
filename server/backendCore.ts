@@ -11,7 +11,29 @@ const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || '';
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || SUPABASE_ANON_KEY;
 const JWT_SECRET = process.env.JWT_SECRET || 'jwt-secret';
 
-export const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+let cachedSupabase: any = null;
+function getSupabaseClient() {
+  if (!cachedSupabase) {
+    const url = process.env.SUPABASE_URL || '';
+    const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || '';
+    if (!url || !key) {
+      console.error('CRITICAL: SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY is missing in environment variables!');
+    }
+    cachedSupabase = createClient(url || 'https://placeholder.supabase.co', key || 'placeholder-key');
+  }
+  return cachedSupabase;
+}
+
+export const supabase = new Proxy({}, {
+  get(target, prop) {
+    const client = getSupabaseClient();
+    const value = client[prop];
+    if (typeof value === 'function') {
+      return value.bind(client);
+    }
+    return value;
+  }
+}) as any;
 
 // Start Telegram bot polling if not already started (disabled in serverless Vercel environments)
 let pollingStarted = false;

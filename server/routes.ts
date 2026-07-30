@@ -803,3 +803,10 @@ apiRouter.post("/import-csv", async (req, res) => {
     res.status(500).json({ error: error.message || 'Import failed' });
   }
 });
+
+apiRouter.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  console.error('Unhandled API Router Error:', err);
+  if (!res.headersSent) {
+    res.status(500).json({ error: err.message || 'Internal server error' });
+  }
+});
