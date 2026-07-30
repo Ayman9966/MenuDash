@@ -43,7 +43,9 @@ function saveAdminChatIds() {
   }
 }
 
-loadAdminChatIds();
+if (!isVercel) {
+  loadAdminChatIds();
+}
 
 /**
  * Send a message via Telegram Bot API

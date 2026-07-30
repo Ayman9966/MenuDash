@@ -2,9 +2,10 @@ import { createClient } from '@supabase/supabase-js';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import * as dotenv from 'dotenv';
-import { startTelegramPolling, sendNewUserAlert, updateRestaurantPlan, getAdminChatCount } from './telegramBot';
 
 dotenv.config();
+
+import { startTelegramPolling, sendNewUserAlert, updateRestaurantPlan, getAdminChatCount } from './telegramBot';
 
 const SUPABASE_URL = process.env.SUPABASE_URL || '';
 const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || '';
@@ -35,13 +36,13 @@ export const supabase = new Proxy({}, {
   }
 }) as any;
 
-// Start Telegram bot polling if not already started (disabled in serverless Vercel environments)
+// منع تشغيل الاستطلاع نهائياً على Vercel
 let pollingStarted = false;
 export function initTelegram() {
   if (process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME) {
-    return; // Serverless functions should not run long polling loops
+    return; 
   }
-  if (!pollingStarted) {
+  if (!pollingStarted && typeof startTelegramPolling === 'function') {
     pollingStarted = true;
     startTelegramPolling(supabase);
   }
@@ -180,4 +181,22 @@ export async function superadminOnly(req: any, res: any): Promise<boolean> {
   return true;
 }
 
-export { SUPABASE_URL, JWT_SECRET, sendNewUserAlert, updateRestaurantPlan, getAdminChatCount };
+export { SUPABASE_URL, JWT_SECRET };
+
+export function safeSendNewUserAlert(...args: any[]) {
+  return typeof sendNewUserAlert === 'function' ? (sendNewUserAlert as any)(...args) : Promise.resolve();
+}
+
+export function safeUpdateRestaurantPlan(...args: any[]) {
+  return typeof updateRestaurantPlan === 'function' ? (updateRestaurantPlan as any)(...args) : Promise.resolve({ success: false, error: 'Telegram bot disabled' });
+}
+
+export function safeGetAdminChatCount() {
+  return typeof getAdminChatCount === 'function' ? getAdminChatCount() : 0;
+}
+
+export { 
+  safeSendNewUserAlert as sendNewUserAlert,
+  safeUpdateRestaurantPlan as updateRestaurantPlan,
+  safeGetAdminChatCount as getAdminChatCount
+};

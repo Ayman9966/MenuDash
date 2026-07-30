@@ -1,6 +1,5 @@
 import express from "express";
 import path from "path";
-import { createServer as createViteServer } from "vite";
 import * as dotenv from "dotenv";
 import { initTelegram } from "./server/backendCore";
 import { apiRouter } from "./server/routes";
@@ -20,13 +19,17 @@ app.use("/api", apiRouter);
 
 // Vite middleware for development or static serving
 if (process.env.NODE_ENV !== "production") {
-  createViteServer({
-    server: { middlewareMode: true },
-    appType: "spa",
-  }).then((vite) => {
-    app.use(vite.middlewares);
+  import("vite").then(({ createServer: createViteServer }) => {
+    createViteServer({
+      server: { middlewareMode: true },
+      appType: "spa",
+    }).then((vite) => {
+      app.use(vite.middlewares);
+    }).catch((err) => {
+      console.error("Vite server middleware error:", err);
+    });
   }).catch((err) => {
-    console.error("Vite server middleware error:", err);
+    console.error("Failed to load vite:", err);
   });
 } else {
   const distPath = path.join(process.cwd(), 'dist');
