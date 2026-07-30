@@ -93,6 +93,7 @@ export default function PublicMenu({ isDemo = false }: { isDemo?: boolean }) {
     setLangMenuOpen(false);
   };
 
+  const [expandedProductId, setExpandedProductId] = useState<string | null>(null);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
 
@@ -188,13 +189,13 @@ export default function PublicMenu({ isDemo = false }: { isDemo?: boolean }) {
   // Helper to render individual product card
   const renderProductCard = (product: Product, isLocked: boolean = false) => {
     const { name, description } = translateProduct(product, i18n.language);
+    const isExpanded = expandedProductId === product.id;
     
     const handleCardClick = () => {
       if (isLocked) {
         setIsUpgradeModalOpen(true);
       } else {
-        setSelectedProduct(product);
-        setIsProductModalOpen(true);
+        setExpandedProductId(isExpanded ? null : product.id);
       }
     };
 
@@ -203,18 +204,25 @@ export default function PublicMenu({ isDemo = false }: { isDemo?: boolean }) {
         key={product.id}
         onClick={handleCardClick}
         className={`bg-white rounded-3xl border shadow-xs transition-all overflow-hidden relative flex cursor-pointer ${
-          viewTemplate === 'grid' ? 'flex-col' : 'flex-row items-center p-4 gap-4'
+          viewTemplate === 'grid' ? 'flex-col' : 'flex-row items-start p-4 gap-4'
         } ${
           isLocked 
             ? 'border-amber-300/80 bg-neutral-50/90 hover:border-amber-500 hover:shadow-md' 
             : 'border-neutral-200/80 hover:shadow-md hover:border-orange-200'
-        }`}
+        } ${isExpanded ? 'ring-2 ring-orange-100 border-orange-200 shadow-lg scale-[1.02]' : ''}`}
       >
         {/* Product Card Content - Blurred when locked */}
-        <div className={`flex-1 flex ${viewTemplate === 'grid' ? 'flex-col' : 'flex-row items-center gap-4'} ${
+        <div className={`flex-1 flex ${viewTemplate === 'grid' ? 'flex-col' : 'flex-row items-start gap-4'} ${
           isLocked ? 'filter blur-[4px] grayscale-[35%] opacity-50 select-none pointer-events-none' : ''
         }`}>
-          <div className={
+          <div 
+            onClick={(e) => {
+              if (isLocked) return;
+              e.stopPropagation();
+              setSelectedProduct(product);
+              setIsProductModalOpen(true);
+            }}
+            className={
             viewTemplate === 'grid' 
               ? 'w-full aspect-square bg-neutral-100 overflow-hidden relative' 
               : 'w-24 h-24 rounded-2xl flex-shrink-0 bg-neutral-100 overflow-hidden relative'
@@ -223,14 +231,14 @@ export default function PublicMenu({ isDemo = false }: { isDemo?: boolean }) {
               <img 
                 src={product.imageUrl} 
                 alt={name} 
-                className="w-full h-full object-cover"
+                className="w-full h-full object-cover transition-transform duration-500 hover:scale-110"
                 referrerPolicy="no-referrer"
                 onError={(e) => {
                   (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=300';
                 }}
               />
             ) : (
-              <div className="w-full h-full flex items-center justify-center bg-orange-50 text-orange-500 font-extrabold text-2xl">
+              <div className="w-full h-full flex items-center justify-center bg-orange-50 text-orange-500 font-extrabold text-2xl uppercase">
                 {name.charAt(0)}
               </div>
             )}
@@ -238,7 +246,11 @@ export default function PublicMenu({ isDemo = false }: { isDemo?: boolean }) {
 
           <div className="flex-1 flex flex-col gap-1 p-2 sm:p-3">
             <h3 className="font-bold text-neutral-900 text-base">{name}</h3>
-            {description && <p className="text-xs text-neutral-500 line-clamp-2 leading-relaxed">{description}</p>}
+            {description && (
+              <p className={`text-xs text-neutral-500 leading-relaxed ${isExpanded ? '' : 'line-clamp-2'}`}>
+                {description}
+              </p>
+            )}
             <div className="mt-2 flex items-center justify-between">
               <span className="font-black text-orange-600 text-base">
                 {restaurant.currency} {getProductPrice(product)}
